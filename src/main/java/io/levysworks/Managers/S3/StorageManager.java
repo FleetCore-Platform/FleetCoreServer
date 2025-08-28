@@ -1,0 +1,155 @@
+package io.levysworks.Managers.S3;
+
+import io.levysworks.Configs.S3Config;
+import io.quarkiverse.amazon.common.AmazonClientBuilder;
+import io.quarkus.runtime.Startup;
+import io.quarkus.tls.runtime.keystores.CredentialProviders;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.Duration;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+@Startup
+@ApplicationScoped
+public class StorageManager {
+    S3Client s3Client;
+
+    @Inject
+    S3Config s3Config;
+
+    private Logger logger;
+
+    @PostConstruct
+    void init() {
+        logger = Logger.getLogger(StorageManager.class.getName());
+
+        s3Client = S3Client.builder()
+                .region(Region.of(s3Config.region()))
+                .credentialsProvider(DefaultCredentialsProvider.builder().build())
+                .build();
+    }
+
+    public boolean createBucket(String bucketName) {
+        try {
+            if (bucketExists(bucketName)) {
+                logger.info("Bucket " + bucketName + " already exists");
+                return true;
+            }
+
+            CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
+                    .bucket(bucketName)
+                    .build();
+
+            CreateBucketResponse response = s3Client.createBucket(createBucketRequest);
+            logger.info("Bucket " + bucketName + " created successfully");
+            return true;
+
+        } catch (S3Exception e) {
+            logger.severe("Failed to create bucket " + bucketName + ": " + e.getMessage());
+            return false;
+        } catch (Exception e) {
+            logger.severe("Unexpected error creating bucket " + bucketName + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean bucketExists(String bucketName) {
+        try {
+            HeadBucketRequest headBucketRequest = HeadBucketRequest.builder()
+                    .bucket(bucketName)
+                    .build();
+
+            s3Client.headBucket(headBucketRequest);
+            return true;
+        } catch (S3Exception e) {
+            return false;
+        }
+    }
+
+    public String uploadMissionBundle(String bundleUUID, InputStream missionBundle) throws IOException {
+        byte[] bytes = missionBundle.readAllBytes();
+        String bundleKey = bundleUUID + ".bundle.zip";
+
+        try {
+            PutObjectResponse response = s3Client.putObject(PutObjectRequest.builder()
+                    .bucket(s3Config.bucketName())
+                    .key(bundleKey)
+                    .contentType("zip")
+                    .build(), RequestBody.fromInputStream(new ByteArrayInputStream(bytes), bytes.length));
+
+            if (response != null && response.sdkHttpResponse().isSuccessful()) {
+                return bundleKey;
+            } else {
+                return null;
+            }
+
+        } catch (Exception e) {
+            if (e instanceof S3Exception) {
+                logger.log(Level.SEVERE, ((S3Exception) e).awsErrorDetails().errorMessage(), e);
+            } else {
+                logger.log(Level.SEVERE, e.getMessage(), e);
+            }
+            return null;
+        }
+    }
+
+    public String uploadMissionBundle(String bundleUUID, File missionBundle) {
+        String bundleKey = bundleUUID + ".bundle.zip";
+
+        try {
+            PutObjectResponse response = s3Client.putObject(PutObjectRequest.builder()
+                    .bucket(s3Config.bucketName())
+                    .key(bundleKey)
+                    .contentType("zip")
+                    .build(), missionBundle.toPath());
+
+            if (response != null && response.sdkHttpResponse().isSuccessful()) {
+                return bundleKey;
+            } else {
+                return null;
+            }
+
+        } catch (Exception e) {
+            if (e instanceof S3Exception) {
+                logger.log(Level.SEVERE, ((S3Exception) e).awsErrorDetails().errorMessage(), e);
+            } else {
+                logger.log(Level.SEVERE, e.getMessage(), e);
+            }
+            return null;
+        }
+    }
+
+    public String getPresignedObjectUrl(String bucketName, String key) {
+        try (S3Presigner presigner = S3Presigner.create()) {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(20))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(presignRequest);
+
+            return presignedGetObjectRequest.url().toExternalForm();
+        }
+    }
+}

@@ -1,4 +1,4 @@
-package io.levysworks;
+package io.levysworks.Configs;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithName;
@@ -8,6 +8,6 @@ public interface IoTCoreConfig {
     @WithName("region")
     String region();
 
-    @WithName("thing_type")
+    @WithName("thing-type")
     String thingType();
 }

@@ -1,4 +1,4 @@
-package io.levysworks.Managers;
+package io.levysworks.Managers.Database;
 
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;

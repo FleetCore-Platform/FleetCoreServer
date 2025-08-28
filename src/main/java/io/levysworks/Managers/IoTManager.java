@@ -1,6 +1,6 @@
 package io.levysworks.Managers;
 
-import io.levysworks.IoTCoreConfig;
+import io.levysworks.Configs.IoTCoreConfig;
 import io.levysworks.Models.IoTCertContainer;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.iot.IotAsyncClient;
 import software.amazon.awssdk.services.iot.model.*;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Startup
@@ -73,7 +74,7 @@ public class IoTManager {
 
         CompletableFuture<CreateThingResponse> future = iotAsyncClient.createThing(createThingRequest);
         future.whenComplete((createThingResponse, ex) -> {
-            if (createThingResponse != null) {
+            if (createThingResponse != null && createThingResponse.sdkHttpResponse().isSuccessful()) {
                 System.out.println(deviceName + " was successfully created. The ARN value is " + createThingResponse.thingArn());
             } else {
                 Throwable cause = ex.getCause();
@@ -95,7 +96,7 @@ public class IoTManager {
 
         CompletableFuture<CreateThingGroupResponse> future = iotAsyncClient.createThingGroup(createThingGroupRequest);
         future.whenComplete((createThingGroupResponse, ex) -> {
-            if (createThingGroupResponse != null) {
+            if (createThingGroupResponse != null && createThingGroupResponse.sdkHttpResponse().isSuccessful()) {
                 System.out.println("Successfully created group " + groupName);
             } else if (ex instanceof IotException) {
                 System.err.println(((IotException) ex).awsErrorDetails().errorMessage());
@@ -105,11 +106,33 @@ public class IoTManager {
         future.join();
     }
 
-    public void startMission() {
-
+    public void createIoTJob(String jobName, String groupARN, String bucketPresignedUrl) {
         CreateJobRequest createJobRequest = CreateJobRequest.builder()
-                .
+                .jobId(jobName)
+                .targets(groupARN)
+                .targetSelection(TargetSelection.SNAPSHOT)
+                .jobTemplateArn("arn:aws:iot:eu-north-1::jobtemplate/AWS-Download-File:1.0")
+                .documentParameters(Map.ofEntries(
+                        Map.entry("downloadUrl", bucketPresignedUrl),
+                        Map.entry("filePath", "/home/pi/missions/")
+                ))
                 .build();
+
+        CompletableFuture<CreateJobResponse> future = iotAsyncClient.createJob(createJobRequest);
+        future.whenComplete((jobResponse, ex) -> {
+            if (jobResponse != null && jobResponse.sdkHttpResponse().isSuccessful()) {
+                System.out.println("New job was successfully created.");
+            } else {
+                Throwable cause = ex.getCause();
+                if (cause instanceof IotException) {
+                    System.err.println(((IotException) cause).awsErrorDetails().errorMessage());
+                } else {
+                    System.err.println("Unexpected error: " + cause.getMessage());
+                }
+            }
+        });
+
+        future.join();
     }
 
     public void deleteDevice(String deviceName) {
