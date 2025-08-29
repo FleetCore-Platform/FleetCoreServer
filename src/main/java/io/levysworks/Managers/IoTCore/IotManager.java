@@ -1,4 +1,4 @@
-package io.levysworks.Managers;
+package io.levysworks.Managers.IoTCore;
 
 import io.levysworks.Configs.IoTCoreConfig;
 import io.levysworks.Models.IoTCertContainer;
@@ -6,19 +6,25 @@ import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.iot.IotAsyncClient;
 import software.amazon.awssdk.services.iot.model.*;
+import software.amazon.awssdk.services.iotdataplane.IotDataPlaneClient;
+import software.amazon.awssdk.services.iotdataplane.model.IotDataPlaneException;
+import software.amazon.awssdk.services.iotdataplane.model.PublishRequest;
+import software.amazon.awssdk.services.iotdataplane.model.PublishResponse;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Startup
 @ApplicationScoped
-public class IoTManager {
+public class IotManager {
     @Inject
     IoTCoreConfig config;
 
@@ -26,7 +32,7 @@ public class IoTManager {
 
     @PostConstruct
     void init() {
-        SdkAsyncHttpClient httpClient = NettyNioAsyncHttpClient.builder()
+        SdkAsyncHttpClient asyncHttpClient = NettyNioAsyncHttpClient.builder()
                 .maxConcurrency(100)
                 .connectionTimeout(Duration.ofSeconds(60))
                 .readTimeout(Duration.ofSeconds(60))
@@ -35,8 +41,31 @@ public class IoTManager {
 
         iotAsyncClient = IotAsyncClient.builder()
                 .region(Region.of(config.region()))
-                .httpClient(httpClient)
+                .httpClient(asyncHttpClient)
                 .build();
+    }
+
+
+//    public void createPolicy(String thingName) {
+//        CreatePolicyRequest createPolicyRequest = CreatePolicyRequest.builder()
+//                .build()
+//
+//    }
+
+    public void addDeviceToGroup(String thingName, String groupName) {
+        AddThingToThingGroupRequest addThingToThingGroupRequest = AddThingToThingGroupRequest.builder()
+                .thingName(thingName)
+                .thingGroupName(groupName)
+                .build();
+
+        CompletableFuture<AddThingToThingGroupResponse> future = iotAsyncClient.addThingToThingGroup(addThingToThingGroupRequest);
+        future.whenComplete((response, throwable) -> {
+            if (throwable == null && response.sdkHttpResponse().isSuccessful()) {
+                System.out.printf("Successfully added %S device to group %s%n", thingName, groupName);
+            } else  {
+                System.out.printf("Failed to add device to group %s%n", thingName);
+            }
+        });
     }
 
     public IoTCertContainer generateCertificate() {

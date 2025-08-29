@@ -5,13 +5,13 @@ import io.quarkiverse.amazon.common.AmazonClientBuilder;
 import io.quarkus.runtime.Startup;
 import io.quarkus.tls.runtime.keystores.CredentialProviders;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -43,6 +43,11 @@ public class StorageManager {
                 .region(Region.of(s3Config.region()))
                 .credentialsProvider(DefaultCredentialsProvider.builder().build())
                 .build();
+    }
+
+    @PreDestroy
+    void destroy() {
+        s3Client.close();
     }
 
     public boolean createBucket(String bucketName) {

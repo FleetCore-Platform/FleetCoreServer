@@ -10,4 +10,7 @@ public interface IoTCoreConfig {
 
     @WithName("thing-type")
     String thingType();
+
+    @WithName("pubsub-client-id")
+    String pubsubClientId();
 }
