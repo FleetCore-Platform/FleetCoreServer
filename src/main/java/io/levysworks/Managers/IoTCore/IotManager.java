@@ -68,6 +68,17 @@ public class IotManager {
         });
     }
 
+    public String getGroupARN(String groupName) {
+        DescribeThingGroupRequest describeThingGroupRequest = DescribeThingGroupRequest.builder()
+                .thingGroupName(groupName)
+                .build();
+
+        CompletableFuture<DescribeThingGroupResponse> future = iotAsyncClient.describeThingGroup(describeThingGroupRequest);
+        DescribeThingGroupResponse response = future.join();
+
+        return response.thingGroupArn();
+    }
+
     public IoTCertContainer generateCertificate() {
         CompletableFuture<CreateKeysAndCertificateResponse> future = iotAsyncClient.createKeysAndCertificate();
         CreateKeysAndCertificateResponse response = future.join();
@@ -143,7 +154,7 @@ public class IotManager {
                 .jobTemplateArn("arn:aws:iot:eu-north-1::jobtemplate/AWS-Download-File:1.0")
                 .documentParameters(Map.ofEntries(
                         Map.entry("downloadUrl", bucketPresignedUrl),
-                        Map.entry("filePath", "/home/pi/missions/")
+                        Map.entry("filePath", "/tmp/missions/")
                 ))
                 .build();
 
