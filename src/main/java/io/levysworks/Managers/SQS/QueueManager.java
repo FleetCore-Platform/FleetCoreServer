@@ -1,6 +1,6 @@
 package io.levysworks.Managers.SQS;
 
-import io.levysworks.Configs.SQSConfig;
+import io.levysworks.Configs.ApplicationConfig;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -18,7 +18,7 @@ public class QueueManager {
     private SqsClient sqsClient;
 
     @Inject
-    SQSConfig config;
+    ApplicationConfig config;
 
     @PostConstruct
     public void init() {

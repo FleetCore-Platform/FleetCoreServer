@@ -1,9 +1,7 @@
 package io.levysworks.Managers.S3;
 
-import io.levysworks.Configs.S3Config;
-import io.quarkiverse.amazon.common.AmazonClientBuilder;
+import io.levysworks.Configs.ApplicationConfig;
 import io.quarkus.runtime.Startup;
-import io.quarkus.tls.runtime.keystores.CredentialProviders;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -31,7 +29,7 @@ public class StorageManager {
     S3Client s3Client;
 
     @Inject
-    S3Config s3Config;
+    ApplicationConfig config;
 
     private Logger logger;
 
@@ -40,7 +38,7 @@ public class StorageManager {
         logger = Logger.getLogger(StorageManager.class.getName());
 
         s3Client = S3Client.builder()
-                .region(Region.of(s3Config.region()))
+                .region(Region.of(config.region()))
                 .credentialsProvider(DefaultCredentialsProvider.builder().build())
                 .build();
     }
@@ -93,7 +91,7 @@ public class StorageManager {
 
         try {
             PutObjectResponse response = s3Client.putObject(PutObjectRequest.builder()
-                    .bucket(s3Config.bucketName())
+                    .bucket(config.s3().bucketName())
                     .key(bundleKey)
                     .contentType("zip")
                     .build(), RequestBody.fromInputStream(new ByteArrayInputStream(bytes), bytes.length));
@@ -119,7 +117,7 @@ public class StorageManager {
 
         try {
             PutObjectResponse response = s3Client.putObject(PutObjectRequest.builder()
-                    .bucket(s3Config.bucketName())
+                    .bucket(config.s3().bucketName())
                     .key(bundleKey)
                     .contentType("zip")
                     .build(), missionBundle.toPath());

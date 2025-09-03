@@ -1,6 +1,6 @@
 package io.levysworks.Managers.IoTCore;
 
-import io.levysworks.Configs.IoTCoreConfig;
+import io.levysworks.Configs.ApplicationConfig;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -22,7 +22,7 @@ public class IotDataPlaneManager {
     private IotDataPlaneClient iotDataPlaneClient;
 
     @Inject
-    IoTCoreConfig config;
+    ApplicationConfig config;
 
     @PostConstruct
     public void init() {

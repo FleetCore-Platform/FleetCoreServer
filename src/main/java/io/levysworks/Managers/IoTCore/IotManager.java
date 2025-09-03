@@ -1,23 +1,17 @@
 package io.levysworks.Managers.IoTCore;
 
-import io.levysworks.Configs.IoTCoreConfig;
+import io.levysworks.Configs.ApplicationConfig;
 import io.levysworks.Models.IoTCertContainer;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.iot.IotAsyncClient;
 import software.amazon.awssdk.services.iot.model.*;
-import software.amazon.awssdk.services.iotdataplane.IotDataPlaneClient;
-import software.amazon.awssdk.services.iotdataplane.model.IotDataPlaneException;
-import software.amazon.awssdk.services.iotdataplane.model.PublishRequest;
-import software.amazon.awssdk.services.iotdataplane.model.PublishResponse;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -26,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 @ApplicationScoped
 public class IotManager {
     @Inject
-    IoTCoreConfig config;
+    ApplicationConfig config;
 
     private IotAsyncClient iotAsyncClient;
 
@@ -109,7 +103,7 @@ public class IotManager {
     public void createDevice(String deviceName) {
         CreateThingRequest createThingRequest = CreateThingRequest.builder()
                 .thingName(deviceName)
-                .thingTypeName(config.thingType())
+                .thingTypeName(config.iot().thingType())
                 .build();
 
         CompletableFuture<CreateThingResponse> future = iotAsyncClient.createThing(createThingRequest);
