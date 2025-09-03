@@ -1,6 +1,9 @@
-.PHONY: clean test run package
+.PHONY: clean test run install package
 
-default: clean test run
+default: clean install
+
+install:
+	./mvnw install
 
 clean:
 	rm -rf target
