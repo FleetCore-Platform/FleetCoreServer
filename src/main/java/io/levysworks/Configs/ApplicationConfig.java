@@ -18,8 +18,11 @@ public interface ApplicationConfig {
     interface IoTCoreConfig {
         @WithName("thing-type")
         String thingType();
-
         @WithName("pubsub-client-id")
         String pubsubClientId();
+        @WithName("mission-cancel-job-arn")
+        String missionCancelJobArn();
+        @WithName("new-mission-job-arn")
+        String newMissionJobArn();
     }
 }

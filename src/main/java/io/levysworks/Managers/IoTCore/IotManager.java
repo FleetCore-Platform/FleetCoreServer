@@ -100,10 +100,15 @@ public class IotManager {
         future.join();
     }
 
-    public void createDevice(String deviceName) {
+    public void createDevice(String deviceName, String outpost, String px4Version, String agentVersion) {
         CreateThingRequest createThingRequest = CreateThingRequest.builder()
                 .thingName(deviceName)
                 .thingTypeName(config.iot().thingType())
+                .attributePayload(AttributePayload.builder().attributes(Map.ofEntries(
+                        Map.entry("outpost", outpost),
+                        Map.entry("px4_version", px4Version),
+                        Map.entry("agent_version", agentVersion)
+                )).build())
                 .build();
 
         CompletableFuture<CreateThingResponse> future = iotAsyncClient.createThing(createThingRequest);
