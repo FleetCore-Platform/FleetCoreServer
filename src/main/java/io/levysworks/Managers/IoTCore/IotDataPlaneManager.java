@@ -16,7 +16,6 @@ import software.amazon.awssdk.services.iotdataplane.model.PublishResponse;
 
 import java.nio.charset.StandardCharsets;
 
-@Startup
 @ApplicationScoped
 public class IotDataPlaneManager {
     private IotDataPlaneClient iotDataPlaneClient;

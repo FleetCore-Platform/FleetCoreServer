@@ -16,7 +16,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-@Startup
 @ApplicationScoped
 public class IotManager {
     @Inject
@@ -45,6 +44,16 @@ public class IotManager {
 //                .build()
 //
 //    }
+
+    public JobExecutionStatus getJobExecutionStatus(String jobId, String thingName) {
+        DescribeJobExecutionRequest describeJobExecutionRequest = DescribeJobExecutionRequest.builder()
+                .jobId(jobId)
+                .thingName(thingName)
+                .build();
+
+        CompletableFuture<DescribeJobExecutionResponse> response = iotAsyncClient.describeJobExecution(describeJobExecutionRequest);
+        return response.join().execution().status();
+    }
 
     public void addDeviceToGroup(String thingName, String groupName) {
         AddThingToThingGroupRequest addThingToThingGroupRequest = AddThingToThingGroupRequest.builder()
@@ -145,16 +154,13 @@ public class IotManager {
         future.join();
     }
 
-    public void createIoTJob(String jobName, String groupARN, String bucketPresignedUrl) {
+    public void createIoTJob(String jobName, String groupARN, String templateARN, Map<String, String> missionParameters) {
         CreateJobRequest createJobRequest = CreateJobRequest.builder()
                 .jobId(jobName)
                 .targets(groupARN)
                 .targetSelection(TargetSelection.SNAPSHOT)
-                .jobTemplateArn("arn:aws:iot:eu-north-1::jobtemplate/AWS-Download-File:1.0")
-                .documentParameters(Map.ofEntries(
-                        Map.entry("downloadUrl", bucketPresignedUrl),
-                        Map.entry("filePath", "/tmp/missions/")
-                ))
+                .jobTemplateArn(templateARN)
+                .documentParameters(missionParameters)
                 .build();
 
         CompletableFuture<CreateJobResponse> future = iotAsyncClient.createJob(createJobRequest);

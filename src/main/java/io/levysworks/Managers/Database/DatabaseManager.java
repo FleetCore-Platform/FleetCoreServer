@@ -10,7 +10,6 @@ import org.postgis.PGgeometry;
 import javax.sql.DataSource;
 import java.sql.*;
 
-@Startup
 @ApplicationScoped
 public class DatabaseManager {
     @Inject
@@ -44,4 +43,5 @@ public class DatabaseManager {
 
     // TODO: Implement database query methods
     public String getGroupUUID(String groupName) {return "";}
+    public Geometry getOutpostGeometry(String outpost) {return null;}
 }

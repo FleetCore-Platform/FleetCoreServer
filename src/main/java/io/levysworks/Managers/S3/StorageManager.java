@@ -23,7 +23,6 @@ import java.time.Duration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@Startup
 @ApplicationScoped
 public class StorageManager {
     S3Client s3Client;
@@ -138,10 +137,14 @@ public class StorageManager {
         }
     }
 
-    public String getPresignedObjectUrl(String bucketName, String key) {
+    public String getInternalObjectUrl(String key) {
+        return "s3://" +  config.s3().bucketName() + "/" + key;
+    }
+
+    public String getPresignedObjectUrl(String key) {
         try (S3Presigner presigner = S3Presigner.create()) {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(bucketName)
+                    .bucket(config.s3().bucketName())
                     .key(key)
                     .build();
 

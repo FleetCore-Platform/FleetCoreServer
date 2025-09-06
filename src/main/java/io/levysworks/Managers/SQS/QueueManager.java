@@ -1,7 +1,6 @@
 package io.levysworks.Managers.SQS;
 
 import io.levysworks.Configs.ApplicationConfig;
-import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -12,7 +11,6 @@ import software.amazon.awssdk.services.sqs.model.*;
 
 import java.util.List;
 
-@Startup
 @ApplicationScoped
 public class QueueManager {
     private SqsClient sqsClient;
@@ -32,7 +30,7 @@ public class QueueManager {
         sqsClient.close();
     }
 
-    public List<Message> readQueue(String queueName) {
+    public List<Message> ingestQueue(String queueName) {
         GetQueueUrlRequest getQueueUrlRequest = GetQueueUrlRequest.builder()
                 .queueName(queueName)
                 .build();
