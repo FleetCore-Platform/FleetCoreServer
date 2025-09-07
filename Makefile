@@ -1,6 +1,6 @@
-.PHONY: clean test run install package
+.PHONY: install clean format lint test run
 
-default: clean install
+default: clean format run
 
 install:
 	./mvnw install
@@ -8,8 +8,14 @@ install:
 clean:
 	rm -rf target
 
+format:
+	./mvnw spotless:apply
+
+lint:
+	./mvnw verify
+
 test:
-	./mvnw test -Ptest
+	./mvnw test
 
 run:
 	./mvnw quarkus:dev
