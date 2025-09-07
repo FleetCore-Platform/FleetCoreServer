@@ -7,21 +7,28 @@ import io.smallrye.config.WithName;
 public interface ApplicationConfig {
     @WithName("region")
     String region();
+
     @WithName("s3")
     S3Config s3();
+
     @WithName("iot")
     IoTCoreConfig iot();
+
     interface S3Config {
         @WithName("bucket-name")
         String bucketName();
     }
+
     interface IoTCoreConfig {
         @WithName("thing-type")
         String thingType();
+
         @WithName("pubsub-client-id")
         String pubsubClientId();
+
         @WithName("mission-cancel-job-arn")
         String missionCancelJobArn();
+
         @WithName("new-mission-job-arn")
         String newMissionJobArn();
     }

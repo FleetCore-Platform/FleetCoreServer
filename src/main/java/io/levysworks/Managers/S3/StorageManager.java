@@ -1,11 +1,17 @@
 package io.levysworks.Managers.S3;
 
 import io.levysworks.Configs.ApplicationConfig;
-import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.Duration;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
@@ -15,20 +21,11 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.time.Duration;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 @ApplicationScoped
 public class StorageManager {
     S3Client s3Client;
 
-    @Inject
-    ApplicationConfig config;
+    @Inject ApplicationConfig config;
 
     private Logger logger;
 
@@ -36,10 +33,11 @@ public class StorageManager {
     void init() {
         logger = Logger.getLogger(StorageManager.class.getName());
 
-        s3Client = S3Client.builder()
-                .region(Region.of(config.region()))
-                .credentialsProvider(DefaultCredentialsProvider.builder().build())
-                .build();
+        s3Client =
+                S3Client.builder()
+                        .region(Region.of(config.region()))
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
+                        .build();
     }
 
     @PreDestroy
@@ -54,9 +52,8 @@ public class StorageManager {
                 return true;
             }
 
-            CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
-                    .bucket(bucketName)
-                    .build();
+            CreateBucketRequest createBucketRequest =
+                    CreateBucketRequest.builder().bucket(bucketName).build();
 
             CreateBucketResponse response = s3Client.createBucket(createBucketRequest);
             logger.info("Bucket " + bucketName + " created successfully");
@@ -73,9 +70,8 @@ public class StorageManager {
 
     private boolean bucketExists(String bucketName) {
         try {
-            HeadBucketRequest headBucketRequest = HeadBucketRequest.builder()
-                    .bucket(bucketName)
-                    .build();
+            HeadBucketRequest headBucketRequest =
+                    HeadBucketRequest.builder().bucket(bucketName).build();
 
             s3Client.headBucket(headBucketRequest);
             return true;
@@ -84,16 +80,21 @@ public class StorageManager {
         }
     }
 
-    public String uploadMissionBundle(String bundleUUID, InputStream missionBundle) throws IOException {
+    public String uploadMissionBundle(String bundleUUID, InputStream missionBundle)
+            throws IOException {
         byte[] bytes = missionBundle.readAllBytes();
         String bundleKey = bundleUUID + ".bundle.zip";
 
         try {
-            PutObjectResponse response = s3Client.putObject(PutObjectRequest.builder()
-                    .bucket(config.s3().bucketName())
-                    .key(bundleKey)
-                    .contentType("zip")
-                    .build(), RequestBody.fromInputStream(new ByteArrayInputStream(bytes), bytes.length));
+            PutObjectResponse response =
+                    s3Client.putObject(
+                            PutObjectRequest.builder()
+                                    .bucket(config.s3().bucketName())
+                                    .key(bundleKey)
+                                    .contentType("zip")
+                                    .build(),
+                            RequestBody.fromInputStream(
+                                    new ByteArrayInputStream(bytes), bytes.length));
 
             if (response != null && response.sdkHttpResponse().isSuccessful()) {
                 return bundleKey;
@@ -115,11 +116,14 @@ public class StorageManager {
         String bundleKey = bundleUUID + ".bundle.zip";
 
         try {
-            PutObjectResponse response = s3Client.putObject(PutObjectRequest.builder()
-                    .bucket(config.s3().bucketName())
-                    .key(bundleKey)
-                    .contentType("zip")
-                    .build(), missionBundle.toPath());
+            PutObjectResponse response =
+                    s3Client.putObject(
+                            PutObjectRequest.builder()
+                                    .bucket(config.s3().bucketName())
+                                    .key(bundleKey)
+                                    .contentType("zip")
+                                    .build(),
+                            missionBundle.toPath());
 
             if (response != null && response.sdkHttpResponse().isSuccessful()) {
                 return bundleKey;
@@ -138,22 +142,22 @@ public class StorageManager {
     }
 
     public String getInternalObjectUrl(String key) {
-        return "s3://" +  config.s3().bucketName() + "/" + key;
+        return "s3://" + config.s3().bucketName() + "/" + key;
     }
 
     public String getPresignedObjectUrl(String key) {
         try (S3Presigner presigner = S3Presigner.create()) {
-            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(config.s3().bucketName())
-                    .key(key)
-                    .build();
+            GetObjectRequest getObjectRequest =
+                    GetObjectRequest.builder().bucket(config.s3().bucketName()).key(key).build();
 
-            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofMinutes(20))
-                    .getObjectRequest(getObjectRequest)
-                    .build();
+            GetObjectPresignRequest presignRequest =
+                    GetObjectPresignRequest.builder()
+                            .signatureDuration(Duration.ofMinutes(20))
+                            .getObjectRequest(getObjectRequest)
+                            .build();
 
-            PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(presignRequest);
+            PresignedGetObjectRequest presignedGetObjectRequest =
+                    presigner.presignGetObject(presignRequest);
 
             return presignedGetObjectRequest.url().toExternalForm();
         }
