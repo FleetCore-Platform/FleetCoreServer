@@ -1,6 +1,7 @@
 package io.levysworks.Managers.SQS;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper;
 import io.levysworks.Configs.ApplicationConfig;
 import io.levysworks.Models.DroneTelemetryModel;
@@ -10,6 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -26,6 +28,7 @@ public class QueueManager {
     public void init() {
         sqsClient = SqsClient.builder().region(Region.of(config.region())).build();
         mapper = new CBORMapper();
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategies.LOWER_CAMEL_CASE);
     }
 
     @PreDestroy
@@ -39,10 +42,8 @@ public class QueueManager {
 
         String queueUrl = sqsClient.getQueueUrl(getQueueUrlRequest).queueUrl();
 
-        System.out.println("Got queue url: " + queueUrl);
-
         ReceiveMessageRequest receiveRequest =
-                ReceiveMessageRequest.builder().queueUrl(queueUrl).build();
+                ReceiveMessageRequest.builder().maxNumberOfMessages(10).queueUrl(queueUrl).build();
 
         ReceiveMessageResponse receiveMessageResponse = sqsClient.receiveMessage(receiveRequest);
 
@@ -52,27 +53,26 @@ public class QueueManager {
                 .messages()
                 .forEach(
                         message -> {
-                            byte[] cborData;
                             try {
-                                cborData = mapper.writeValueAsBytes(message.body());
-                                DroneTelemetryModel telemetryData =
-                                        mapper.readValue(cborData, DroneTelemetryModel.class);
+                                String messageBody = message.body();
 
-                                result.add(telemetryData);
+                                byte[] cborBytes = Base64.getDecoder().decode(messageBody);
+
+                                DroneTelemetryModel model =
+                                        mapper.readValue(cborBytes, DroneTelemetryModel.class);
+                                result.add(model);
+
+                                DeleteMessageRequest deleteRequest =
+                                        DeleteMessageRequest.builder()
+                                                .queueUrl(queueUrl)
+                                                .receiptHandle(message.receiptHandle())
+                                                .build();
+
+                                sqsClient.deleteMessage(deleteRequest);
                             } catch (IOException e) {
-                                System.err.println("Failed to serialize CBOR message.");
+                                System.err.printf("Failed to deserialize CBOR message: %s%n", e);
                             }
                         });
-
-        //        for (Message msg : messages) {
-        //            DeleteMessageRequest deleteRequest =
-        //                    DeleteMessageRequest.builder()
-        //                            .queueUrl(queueUrl)
-        //                            .receiptHandle(msg.receiptHandle())
-        //                            .build();
-        //
-        //            sqsClient.deleteMessage(deleteRequest);
-        //        }
 
         return result;
     }
