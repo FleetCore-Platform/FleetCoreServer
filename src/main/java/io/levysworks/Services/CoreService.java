@@ -6,10 +6,11 @@
  import io.levysworks.Managers.Database.DbModels.DbDrone;
  import io.levysworks.Managers.Database.Mappers.CoordinatorMapper;
  import io.levysworks.Managers.Database.Mappers.DroneMapper;
+ import io.levysworks.Managers.Database.Mappers.GroupMapper;
+ import io.levysworks.Managers.Database.Mappers.MissionMapper;
  import io.levysworks.Managers.IoTCore.IotDataPlaneManager;
  import io.levysworks.Managers.IoTCore.IotManager;
  import io.levysworks.Managers.S3.StorageManager;
- import io.levysworks.Managers.SQS.QueueManager;
  import io.levysworks.Models.IoTCertContainer;
  import jakarta.annotation.PostConstruct;
  import jakarta.enterprise.context.ApplicationScoped;
@@ -27,12 +28,12 @@
     @Inject IotManager iotManager;
     @Inject IotDataPlaneManager iotDataPlaneManager;
     @Inject DatabaseManager dbManager;
-    @Inject QueueManager queueManager;
     @Inject StorageManager storageManager;
     @Inject ApplicationConfig config;
 
     @Inject DroneMapper droneMapper;
-
+    @Inject GroupMapper groupMapper;
+    @Inject MissionMapper missionMapper;
     @Inject CoordinatorMapper coordinatorMapper;
 
     DatabaseManager databaseManager;
@@ -59,7 +60,15 @@
         }
     }
 
-    // TODO: Implement underlying methods for database operations
+    /**
+     * Groups multiple manager operations to register a new drone in IoT Core, and RDS
+     * @param outpost Name of the outpost to create the drone in
+     * @param group The name of the groups to create the drone in
+     * @param droneName Desired name of the drone
+     * @param address Public IP address of the drone
+     * @param px4Version PX4 firmware version running on the pixhawk hardware
+     * @param agentVersion Version of the OnboardAgent client
+     */
     public void registerNewDrone(
             String outpost,
             String group,
@@ -73,16 +82,25 @@
         iotManager.createDevice(droneName, outpost, px4Version, agentVersion);
         iotManager.attachCertificate(droneName, certContainer.getCertificateARN());
 
-        // TODO: Refactor to use a single group identifier, group name or UUID
+        String groupARN = iotManager.getGroupARN(group);
+        iotManager.addDeviceToGroup(droneName, groupARN);
 
-        iotManager.addDeviceToGroup(droneName, group);
-
-//        droneMapper.insertDrone(uuid, droneName, groupUUID, address, agentVersion);
+        UUID groupUUID = groupMapper.findByName(group).getOutpost_uuid();
+        Timestamp addedDate = new Timestamp(System.currentTimeMillis());
+        droneMapper.insertDrone(uuid, droneName, groupUUID, address, agentVersion, addedDate);
     }
 
+    /**
+     * Coordinates multiple managers to create an IoT Core mission for a group of drones
+     * @param outpost The name of the outpost the groups is in
+     * @param group Name of the group of drones
+     * @param coordinatorUUID The UUID of the coordinator performing this operation
+     * @throws IOException If there was an error generating the mission bundle
+     */
     public void createNewMission(String outpost, String group, String coordinatorUUID)
             throws IOException {
-        String missionName = "mission-" + outpost + ":" + group + "-" + System.currentTimeMillis();
+        Timestamp startedAt = new Timestamp(System.currentTimeMillis());
+        String missionName = "mission-" + outpost + ":" + group + "-" + startedAt.toString();
 
         Geometry area = dbManager.getOutpostGeometry(outpost);
 
@@ -101,9 +119,9 @@
                         Map.entry("downloadUrl", presignedUrl),
                         Map.entry("filePath", "/tmp/missions/")));
 
-//        String groupUUID = databaseManager.getGroupUUID(group);
-//        String bundleUrl = storageManager.getInternalObjectUrl(key);
-//
-//        databaseManager.createMission(groupUUID, missionName, bundleUrl, coordinatorUUID);
+        UUID groupUUID = groupMapper.findByName(group).getOutpost_uuid();
+        String bundleUrl = storageManager.getInternalObjectUrl(key);
+
+        missionMapper.insert(UUID.randomUUID(), groupUUID, missionName, bundleUrl, startedAt, UUID.fromString(coordinatorUUID));
     }
  }

@@ -52,11 +52,11 @@ public class IotManager {
         return response.join().execution().status();
     }
 
-    public void addDeviceToGroup(String thingName, String groupName) {
+    public void addDeviceToGroup(String thingName, String groupARN) {
         AddThingToThingGroupRequest addThingToThingGroupRequest =
                 AddThingToThingGroupRequest.builder()
                         .thingName(thingName)
-                        .thingGroupName(groupName)
+                        .thingGroupArn(groupARN)
                         .build();
 
         CompletableFuture<AddThingToThingGroupResponse> future =
@@ -65,7 +65,7 @@ public class IotManager {
                 (response, throwable) -> {
                     if (throwable == null && response.sdkHttpResponse().isSuccessful()) {
                         System.out.printf(
-                                "Successfully added %S device to group %s%n", thingName, groupName);
+                                "Successfully added %S device to group %s%n", thingName, groupARN);
                     } else {
                         System.out.printf("Failed to add device to group %s%n", thingName);
                     }
