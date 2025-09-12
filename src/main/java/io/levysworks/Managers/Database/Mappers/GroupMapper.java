@@ -17,7 +17,10 @@ public interface GroupMapper {
             @Param("created_at") Timestamp created_at);
 
     @Select("SELECT * FROM groups WHERE uuid = #{uuid}")
-    DbGroup findById(@Param("uuid") UUID uuid);
+    DbGroup findByUuid(@Param("uuid") UUID uuid);
+
+    @Select("SELECT * FROM groups WHERE name = #{name}")
+    DbGroup findByName(@Param("name") String name);
 
     @Update(
             "UPDATE groups SET outpost_uuid = #{outpost_uuid}, name = #{name}, created_at ="
@@ -29,5 +32,8 @@ public interface GroupMapper {
             @Param("created_at") Timestamp created_at);
 
     @Delete("DELETE FROM groups WHERE uuid = #{uuid}")
-    void delete(@Param("uuid") UUID uuid);
+    void deleteByUuid(@Param("uuid") UUID uuid);
+
+    @Delete("DELETE FROM groupds WHERE name = #{name}")
+    void deleteByName(@Param("name") String name);
 }
