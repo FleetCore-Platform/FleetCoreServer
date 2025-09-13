@@ -131,12 +131,11 @@
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
-            <artifactId>iotdataplane</artifactId>
+            <artifactId>sts</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.levysworks</groupId>
-            <artifactId>FleetCoreLib</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>iotdataplane</artifactId>
         </dependency>
     </dependencies>
 
