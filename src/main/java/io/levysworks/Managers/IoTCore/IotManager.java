@@ -8,17 +8,20 @@ import jakarta.inject.Inject;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.iot.IotAsyncClient;
 import software.amazon.awssdk.services.iot.model.*;
+import software.amazon.awssdk.services.sts.StsClient;
 
 @ApplicationScoped
 public class IotManager {
     @Inject ApplicationConfig config;
 
     private IotAsyncClient iotAsyncClient;
+    private String accountIdentifier;
 
     @PostConstruct
     void init() {
@@ -35,13 +38,37 @@ public class IotManager {
                         .region(Region.of(config.region()))
                         .httpClient(asyncHttpClient)
                         .build();
+
+        try (StsClient stsClient = StsClient.create()) {
+            accountIdentifier = stsClient.getCallerIdentity().account();
+        }
     }
 
-    //    public void createPolicy(String thingName) {
-    //        CreatePolicyRequest createPolicyRequest = CreatePolicyRequest.builder()
-    //                .build()
-    //
-    //    }
+    public String createPolicy(String thingName) throws CompletionException {
+        String policyName = thingName + "-policy";
+        String policyDocument =
+                IotPolicyMaker.buildPolicyDocument(accountIdentifier, config.region());
+
+        CreatePolicyRequest createPolicyRequest =
+                CreatePolicyRequest.builder()
+                        .policyName(policyName)
+                        .policyDocument(policyDocument)
+                        .build();
+
+        CompletableFuture<CreatePolicyResponse> future =
+                iotAsyncClient.createPolicy(createPolicyRequest);
+
+        CreatePolicyResponse createPolicyResponse = future.join();
+        return createPolicyResponse.policyName();
+    }
+
+    public void attachPolicyToCertificate(String certificateARN, String policyARN) {
+        AttachPolicyRequest attachPolicyRequest =
+                AttachPolicyRequest.builder().policyName(policyARN).target(certificateARN).build();
+
+        AttachPolicyResponse attachPolicyResponse =
+                iotAsyncClient.attachPolicy(attachPolicyRequest).join();
+    }
 
     public JobExecutionStatus getJobExecutionStatus(String jobId, String thingName) {
         DescribeJobExecutionRequest describeJobExecutionRequest =
@@ -88,7 +115,10 @@ public class IotManager {
                 iotAsyncClient.createKeysAndCertificate();
         CreateKeysAndCertificateResponse response = future.join();
 
-        return new IoTCertContainer(response.certificatePem(), response.certificateArn());
+        return new IoTCertContainer(
+                response.keyPair().privateKey(),
+                response.certificatePem(),
+                response.certificateArn());
     }
 
     public void attachCertificate(String deviceName, String certificateARN) {
