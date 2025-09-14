@@ -6,6 +6,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -147,17 +149,16 @@ public class IotManager {
         future.join();
     }
 
-    public void createDevice(
-            String deviceName, String outpost, String px4Version, String agentVersion) {
+    public void createThing(
+            String thingName, String px4Version, String agentVersion) {
         CreateThingRequest createThingRequest =
                 CreateThingRequest.builder()
-                        .thingName(deviceName)
+                        .thingName(thingName)
                         .thingTypeName(config.iot().thingType())
                         .attributePayload(
                                 AttributePayload.builder()
                                         .attributes(
                                                 Map.ofEntries(
-                                                        Map.entry("outpost", outpost),
                                                         Map.entry("px4_version", px4Version),
                                                         Map.entry("agent_version", agentVersion)))
                                         .build())
@@ -170,7 +171,7 @@ public class IotManager {
                     if (createThingResponse != null
                             && createThingResponse.sdkHttpResponse().isSuccessful()) {
                         System.out.println(
-                                deviceName
+                                thingName
                                         + " was successfully created. The ARN value is "
                                         + createThingResponse.thingArn());
                     } else {
@@ -187,9 +188,95 @@ public class IotManager {
         future.join();
     }
 
-    public void createDeviceGroup(String groupName) {
+    public String getThingGroup(String thingName) {
+        ListThingGroupsForThingRequest listThingGroupsForThingRequest =
+                ListThingGroupsForThingRequest.builder()
+                        .thingName(thingName)
+                        .maxResults(1)
+                        .build();
+
+
+        ListThingGroupsForThingResponse future = iotAsyncClient.listThingGroupsForThing(listThingGroupsForThingRequest).join();
+        return future.thingGroups().getFirst().groupArn();
+    }
+
+    public void removeThing(String thingName) {
+        DeleteThingRequest deleteThingRequest =
+                DeleteThingRequest.builder()
+                        .thingName(thingName)
+                        .build();
+
+        CompletableFuture<DeleteThingResponse> future =
+                iotAsyncClient.deleteThing(deleteThingRequest);
+
+        DeleteThingResponse response = future.join();
+    }
+
+    public void removeThingFromGroup(String thingName, String groupARN) {
+        RemoveThingFromThingGroupRequest removeThingFromThingGroupRequest =
+                RemoveThingFromThingGroupRequest.builder()
+                        .thingName(thingName)
+                        .thingGroupArn(groupARN)
+                        .build();
+
+        iotAsyncClient.removeThingFromThingGroup(removeThingFromThingGroupRequest).join();
+    }
+
+    public void removePolicies(String principalARN) {
+        ListAttachedPoliciesRequest listAttachedPoliciesRequest =
+                ListAttachedPoliciesRequest.builder()
+                        .target(principalARN)
+                        .build();
+
+        CompletableFuture<ListAttachedPoliciesResponse> future =
+                iotAsyncClient.listAttachedPolicies(listAttachedPoliciesRequest);
+
+        ListAttachedPoliciesResponse response = future.join();
+        String policyName = response.policies().getFirst().policyName();
+
+        DeletePolicyRequest deletePolicyRequest =
+                DeletePolicyRequest.builder()
+                        .policyName(policyName)
+                        .build();
+
+        iotAsyncClient.deletePolicy(deletePolicyRequest).join();
+    }
+
+    public void detachCertificates(String deviceName) {
+        ListThingPrincipalsRequest listThingPrincipalsRequest =
+                ListThingPrincipalsRequest.builder()
+                        .thingName(deviceName)
+                        .build();
+
+        CompletableFuture<ListThingPrincipalsResponse> future =
+                iotAsyncClient.listThingPrincipals(listThingPrincipalsRequest);
+
+        ListThingPrincipalsResponse response = future.join();
+        List<String> principalARNs = new ArrayList<>(response.principals());
+
+        principalARNs.forEach(arn -> {
+            DetachThingPrincipalRequest detachThingPrincipalRequest =
+                    DetachThingPrincipalRequest.builder()
+                            .principal(arn)
+                            .thingName(deviceName)
+                            .build();
+
+            iotAsyncClient.detachThingPrincipal(detachThingPrincipalRequest).join();
+        });
+    }
+
+    public void createDeviceGroup(String groupName, String outpost) {
         CreateThingGroupRequest createThingGroupRequest =
-                CreateThingGroupRequest.builder().thingGroupName(groupName).build();
+                CreateThingGroupRequest.builder()
+                        .thingGroupProperties(
+                                ThingGroupProperties.builder()
+                                        .attributePayload(
+                                                AttributePayload.builder()
+                                                        .attributes(Map.of("outpost", outpost))
+                                                        .build())
+                                        .build())
+                        .thingGroupName(groupName)
+                        .build();
 
         CompletableFuture<CreateThingGroupResponse> future =
                 iotAsyncClient.createThingGroup(createThingGroupRequest);

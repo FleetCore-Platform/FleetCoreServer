@@ -10,6 +10,9 @@ public interface DroneMapper {
     @Select("SELECT * FROM drones WHERE uuid = #{uuid}")
     DbDrone findByUuid(@Param("uuid") UUID uuid);
 
+    @Select("SELECT * FROM drones WHERE name = #{name}")
+    DbDrone findByName(@Param("name") String name);
+
     @Insert(
             "INSERT INTO drones (uuid, name, group_uuid, address, manager_version,"
                     + " first_discovered) VALUES (#{uuid}, #{name}, #{groupUuid}, #{address},"

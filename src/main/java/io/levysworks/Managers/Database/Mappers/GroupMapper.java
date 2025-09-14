@@ -34,6 +34,6 @@ public interface GroupMapper {
     @Delete("DELETE FROM groups WHERE uuid = #{uuid}")
     void deleteByUuid(@Param("uuid") UUID uuid);
 
-    @Delete("DELETE FROM groupds WHERE name = #{name}")
+    @Delete("DELETE FROM groups WHERE name = #{name}")
     void deleteByName(@Param("name") String name);
 }

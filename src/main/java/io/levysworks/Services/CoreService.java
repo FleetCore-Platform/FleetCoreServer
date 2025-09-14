@@ -3,10 +3,7 @@ package io.levysworks.Services;
 import io.levysworks.Algorithms.PolygonCoverageAlgorithm;
 import io.levysworks.Configs.ApplicationConfig;
 import io.levysworks.Managers.Database.DatabaseManager;
-import io.levysworks.Managers.Database.Mappers.CoordinatorMapper;
-import io.levysworks.Managers.Database.Mappers.DroneMapper;
-import io.levysworks.Managers.Database.Mappers.GroupMapper;
-import io.levysworks.Managers.Database.Mappers.MissionMapper;
+import io.levysworks.Managers.Database.Mappers.*;
 import io.levysworks.Managers.IoTCore.IotDataPlaneManager;
 import io.levysworks.Managers.IoTCore.IotManager;
 import io.levysworks.Managers.S3.StorageManager;
@@ -19,6 +16,8 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.UUID;
+
+import jakarta.ws.rs.NotFoundException;
 import org.postgis.Geometry;
 
 @Startup
@@ -32,6 +31,7 @@ public class CoreService {
 
     @Inject DroneMapper droneMapper;
     @Inject GroupMapper groupMapper;
+    @Inject OutpostMapper outpostMapper;
     @Inject MissionMapper missionMapper;
     @Inject CoordinatorMapper coordinatorMapper;
 
@@ -40,7 +40,6 @@ public class CoreService {
     /**
      * Groups multiple manager operations to register a new drone in IoT Core, and RDS
      *
-     * @param outpost Name of the outpost to create the drone in
      * @param group The name of the groups to create the drone in
      * @param droneName Desired name of the drone
      * @param address Public IP address of the drone
@@ -48,7 +47,6 @@ public class CoreService {
      * @param agentVersion Version of the OnboardAgent client
      */
     public IoTCertContainer registerNewDrone(
-            String outpost,
             String group,
             String droneName,
             String address,
@@ -57,7 +55,7 @@ public class CoreService {
         UUID uuid = UUID.randomUUID();
 
         IoTCertContainer certContainer = iotManager.generateCertificate();
-        iotManager.createDevice(droneName, outpost, px4Version, agentVersion);
+        iotManager.createThing(droneName, px4Version, agentVersion);
 
         String policyName = iotManager.createPolicy(droneName);
         iotManager.attachPolicyToCertificate(certContainer.getCertificateARN(), policyName);
@@ -72,6 +70,36 @@ public class CoreService {
         droneMapper.insertDrone(uuid, droneName, groupUUID, address, agentVersion, addedDate);
 
         return certContainer;
+    }
+
+    public void removeDrone(String droneName) {
+        iotManager.detachCertificates(droneName);
+
+        String groupARN = iotManager.getThingGroup(droneName);
+
+        if (groupARN != null) {
+            iotManager.removeThingFromGroup(droneName, groupARN);
+        } else {
+            System.err.printf("%s not in a group!", droneName);
+        }
+
+        iotManager.removeThing(droneName);
+
+        UUID droneUUID = droneMapper.findByName(droneName).getUuid();
+        droneMapper.deleteDrone(droneUUID);
+    }
+
+    public void createNewGroup(String groupName, String outpost) throws NotFoundException {
+        UUID groupUUID = UUID.randomUUID();
+        UUID outpostUUID = outpostMapper.findByName(outpost).getUuid();
+        Timestamp createdDate = new Timestamp(System.currentTimeMillis());
+
+        if (outpostUUID == null) {
+            throw new NotFoundException("Outpost UUID not found for name " + outpost);
+        }
+
+        iotManager.createDeviceGroup(groupName, outpost);
+        groupMapper.insert(groupUUID, outpostUUID, groupName, createdDate);
     }
 
     /**
