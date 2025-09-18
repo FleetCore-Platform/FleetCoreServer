@@ -2,6 +2,7 @@ package io.levysworks.Managers.Database.Mappers;
 
 import io.levysworks.Managers.Database.DbModels.DbDrone;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.UUID;
 import org.apache.ibatis.annotations.*;
 
@@ -9,6 +10,13 @@ import org.apache.ibatis.annotations.*;
 public interface DroneMapper {
     @Select("SELECT * FROM drones WHERE uuid = #{uuid}")
     DbDrone findByUuid(@Param("uuid") UUID uuid);
+
+    @Select("SELECT * FROM drones LIMIT ${limit}")
+    List<DbDrone> listDrones(@Param("limit") int limit);
+
+    @Select("SELECT * FROM drones WHERE group_uuid = #{group_uuid} LIMIT ${limit}")
+    List<DbDrone> listDronesByGroupUuid(
+            @Param("group_uuid") UUID group_uuid, @Param("limit") int limit);
 
     @Select("SELECT * FROM drones WHERE name = #{name}")
     DbDrone findByName(@Param("name") String name);
