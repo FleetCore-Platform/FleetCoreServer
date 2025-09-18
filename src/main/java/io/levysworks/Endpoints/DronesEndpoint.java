@@ -2,7 +2,6 @@ package io.levysworks.Endpoints;
 
 import io.levysworks.Managers.Database.DbModels.DbDrone;
 import io.levysworks.Managers.Database.Mappers.DroneMapper;
-import io.levysworks.Managers.IoTCore.IotManager;
 import io.levysworks.Models.IoTCertContainer;
 import io.levysworks.Models.RegisterDroneRequestModel;
 import io.levysworks.Services.CoreService;
@@ -10,7 +9,6 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -25,7 +23,9 @@ public class DronesEndpoint {
     @GET
     @Path("/list/{group_uuid}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response listGroupDrones(@DefaultValue("10") @QueryParam("limit") int limit, @PathParam("group_uuid") String group_uuid) {
+    public Response listGroupDrones(
+            @DefaultValue("10") @QueryParam("limit") int limit,
+            @PathParam("group_uuid") String group_uuid) {
 
         if (limit <= 0 || limit > 1000) {
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -46,16 +46,28 @@ public class DronesEndpoint {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response registerDrone(RegisterDroneRequestModel body) {
-        if (body == null || body.groupName() == null || body.droneName() == null || body.address() == null || body.px4Version() == null || body.agentVersion() == null) {
+        if (body == null
+                || body.groupName() == null
+                || body.droneName() == null
+                || body.address() == null
+                || body.px4Version() == null
+                || body.agentVersion() == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
         try {
-            IoTCertContainer certs = coreService.registerNewDrone(body.groupName(), body.droneName(), body.address(), body.px4Version(), body.agentVersion());
+            IoTCertContainer certs =
+                    coreService.registerNewDrone(
+                            body.groupName(),
+                            body.droneName(),
+                            body.address(),
+                            body.px4Version(),
+                            body.agentVersion());
 
             return Response.ok(certs).build();
         } catch (NotFoundException nfe) {
-            return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage()).build();
+            return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage())
+                    .build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -75,7 +87,8 @@ public class DronesEndpoint {
 
             return Response.status(Response.Status.NO_CONTENT).build();
         } catch (NotFoundException nfe) {
-            return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage()).build();
+            return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage())
+                    .build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
