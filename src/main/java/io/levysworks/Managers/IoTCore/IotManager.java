@@ -149,8 +149,7 @@ public class IotManager {
         future.join();
     }
 
-    public void createThing(
-            String thingName, String px4Version, String agentVersion) {
+    public void createThing(String thingName, String px4Version, String agentVersion) {
         CreateThingRequest createThingRequest =
                 CreateThingRequest.builder()
                         .thingName(thingName)
@@ -190,21 +189,16 @@ public class IotManager {
 
     public String getThingGroup(String thingName) {
         ListThingGroupsForThingRequest listThingGroupsForThingRequest =
-                ListThingGroupsForThingRequest.builder()
-                        .thingName(thingName)
-                        .maxResults(1)
-                        .build();
+                ListThingGroupsForThingRequest.builder().thingName(thingName).maxResults(1).build();
 
-
-        ListThingGroupsForThingResponse future = iotAsyncClient.listThingGroupsForThing(listThingGroupsForThingRequest).join();
+        ListThingGroupsForThingResponse future =
+                iotAsyncClient.listThingGroupsForThing(listThingGroupsForThingRequest).join();
         return future.thingGroups().getFirst().groupArn();
     }
 
     public void removeThing(String thingName) {
         DeleteThingRequest deleteThingRequest =
-                DeleteThingRequest.builder()
-                        .thingName(thingName)
-                        .build();
+                DeleteThingRequest.builder().thingName(thingName).build();
 
         CompletableFuture<DeleteThingResponse> future =
                 iotAsyncClient.deleteThing(deleteThingRequest);
@@ -224,9 +218,7 @@ public class IotManager {
 
     public void removePolicies(String principalARN) {
         ListAttachedPoliciesRequest listAttachedPoliciesRequest =
-                ListAttachedPoliciesRequest.builder()
-                        .target(principalARN)
-                        .build();
+                ListAttachedPoliciesRequest.builder().target(principalARN).build();
 
         CompletableFuture<ListAttachedPoliciesResponse> future =
                 iotAsyncClient.listAttachedPolicies(listAttachedPoliciesRequest);
@@ -235,18 +227,14 @@ public class IotManager {
         String policyName = response.policies().getFirst().policyName();
 
         DeletePolicyRequest deletePolicyRequest =
-                DeletePolicyRequest.builder()
-                        .policyName(policyName)
-                        .build();
+                DeletePolicyRequest.builder().policyName(policyName).build();
 
         iotAsyncClient.deletePolicy(deletePolicyRequest).join();
     }
 
     public void detachCertificates(String deviceName) {
         ListThingPrincipalsRequest listThingPrincipalsRequest =
-                ListThingPrincipalsRequest.builder()
-                        .thingName(deviceName)
-                        .build();
+                ListThingPrincipalsRequest.builder().thingName(deviceName).build();
 
         CompletableFuture<ListThingPrincipalsResponse> future =
                 iotAsyncClient.listThingPrincipals(listThingPrincipalsRequest);
@@ -254,15 +242,16 @@ public class IotManager {
         ListThingPrincipalsResponse response = future.join();
         List<String> principalARNs = new ArrayList<>(response.principals());
 
-        principalARNs.forEach(arn -> {
-            DetachThingPrincipalRequest detachThingPrincipalRequest =
-                    DetachThingPrincipalRequest.builder()
-                            .principal(arn)
-                            .thingName(deviceName)
-                            .build();
+        principalARNs.forEach(
+                arn -> {
+                    DetachThingPrincipalRequest detachThingPrincipalRequest =
+                            DetachThingPrincipalRequest.builder()
+                                    .principal(arn)
+                                    .thingName(deviceName)
+                                    .build();
 
-            iotAsyncClient.detachThingPrincipal(detachThingPrincipalRequest).join();
-        });
+                    iotAsyncClient.detachThingPrincipal(detachThingPrincipalRequest).join();
+                });
     }
 
     public void createDeviceGroup(String groupName, String outpost) {

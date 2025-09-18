@@ -3,6 +3,9 @@ package io.levysworks.Services;
 import io.levysworks.Algorithms.PolygonCoverageAlgorithm;
 import io.levysworks.Configs.ApplicationConfig;
 import io.levysworks.Managers.Database.DatabaseManager;
+import io.levysworks.Managers.Database.DbModels.DbDrone;
+import io.levysworks.Managers.Database.DbModels.DbGroup;
+import io.levysworks.Managers.Database.DbModels.DbOutpost;
 import io.levysworks.Managers.Database.Mappers.*;
 import io.levysworks.Managers.IoTCore.IotDataPlaneManager;
 import io.levysworks.Managers.IoTCore.IotManager;
@@ -11,13 +14,12 @@ import io.levysworks.Models.IoTCertContainer;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.NotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.UUID;
-
-import jakarta.ws.rs.NotFoundException;
 import org.postgis.Geometry;
 
 @Startup
@@ -28,14 +30,11 @@ public class CoreService {
     @Inject DatabaseManager dbManager;
     @Inject StorageManager storageManager;
     @Inject ApplicationConfig config;
-
     @Inject DroneMapper droneMapper;
     @Inject GroupMapper groupMapper;
     @Inject OutpostMapper outpostMapper;
     @Inject MissionMapper missionMapper;
     @Inject CoordinatorMapper coordinatorMapper;
-
-    DatabaseManager databaseManager;
 
     /**
      * Groups multiple manager operations to register a new drone in IoT Core, and RDS
@@ -47,11 +46,14 @@ public class CoreService {
      * @param agentVersion Version of the OnboardAgent client
      */
     public IoTCertContainer registerNewDrone(
-            String group,
-            String droneName,
-            String address,
-            String px4Version,
-            String agentVersion) {
+            String group, String droneName, String address, String px4Version, String agentVersion)
+            throws NotFoundException {
+        DbGroup dbGroup = groupMapper.findByName(group);
+
+        if (dbGroup == null) {
+            throw new NotFoundException("Group not found with name " + group);
+        }
+
         UUID uuid = UUID.randomUUID();
 
         IoTCertContainer certContainer = iotManager.generateCertificate();
@@ -65,14 +67,21 @@ public class CoreService {
         String groupARN = iotManager.getGroupARN(group);
         iotManager.addDeviceToGroup(droneName, groupARN);
 
-        UUID groupUUID = groupMapper.findByName(group).getOutpost_uuid();
+        UUID groupUUID = dbGroup.getUuid();
         Timestamp addedDate = new Timestamp(System.currentTimeMillis());
         droneMapper.insertDrone(uuid, droneName, groupUUID, address, agentVersion, addedDate);
 
         return certContainer;
     }
 
-    public void removeDrone(String droneName) {
+    public void removeDrone(String droneName) throws NotFoundException {
+        DbDrone dbDrone = droneMapper.findByName(droneName);
+        if (dbDrone == null) {
+            throw new NotFoundException("Drone not found with name " + droneName);
+        }
+
+        UUID droneUUID = dbDrone.getUuid();
+
         iotManager.detachCertificates(droneName);
 
         String groupARN = iotManager.getThingGroup(droneName);
@@ -84,19 +93,19 @@ public class CoreService {
         }
 
         iotManager.removeThing(droneName);
-
-        UUID droneUUID = droneMapper.findByName(droneName).getUuid();
         droneMapper.deleteDrone(droneUUID);
     }
 
     public void createNewGroup(String groupName, String outpost) throws NotFoundException {
         UUID groupUUID = UUID.randomUUID();
-        UUID outpostUUID = outpostMapper.findByName(outpost).getUuid();
-        Timestamp createdDate = new Timestamp(System.currentTimeMillis());
+        DbOutpost dbOutpost = outpostMapper.findByName(outpost);
 
+        UUID outpostUUID = dbOutpost.getUuid();
         if (outpostUUID == null) {
             throw new NotFoundException("Outpost UUID not found for name " + outpost);
         }
+
+        Timestamp createdDate = new Timestamp(System.currentTimeMillis());
 
         iotManager.createDeviceGroup(groupName, outpost);
         groupMapper.insert(groupUUID, outpostUUID, groupName, createdDate);
