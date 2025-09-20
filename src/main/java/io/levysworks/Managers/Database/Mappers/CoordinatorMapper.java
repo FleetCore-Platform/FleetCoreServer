@@ -9,8 +9,8 @@ import org.apache.ibatis.annotations.*;
 public interface CoordinatorMapper {
     @Insert(
             "INSERT INTO coordinators (uuid, cognito_sub, first_name, last_name, email,"
-                    + " registration_date) VALUES (#{uuid}, #{cognito_sub}, #{first_name},"
-                    + " #{last_name}, #{email}, #{registration_date})")
+                    + " registration_date) VALUES (#{uuid, jdbcType=OTHER}, #{cognito_sub},"
+                    + " #{first_name}, #{last_name}, #{email}, #{registration_date})")
     void insert(
             @Param("uuid") UUID uuid,
             @Param("cognito_sub") String cognito_sub,
@@ -19,13 +19,13 @@ public interface CoordinatorMapper {
             @Param("email") String email,
             @Param("registration_date") Timestamp registration_date);
 
-    @Select("SELECT * FROM coordinators WHERE uuid = #{uuid}")
+    @Select("SELECT * FROM coordinators WHERE uuid = #{uuid, jdbcType=OTHER}")
     DbCoordinator findByUuid(@Param("uuid") UUID uuid);
 
     @Update(
             "UPDATE coordinators SET cognito_sub = #{cognito_sub}, first_name = #{first_name},"
                     + " last_name = #{last_name}, email = #{email}, registration_date ="
-                    + " #{registration_date} WHERE uuid = #{uuid}")
+                    + " #{registration_date} WHERE uuid = #{uuid, jdbcType=OTHER}")
     void update(
             @Param("uuid") UUID uuid,
             @Param("cognito_sub") String cognito_sub,
@@ -34,6 +34,6 @@ public interface CoordinatorMapper {
             @Param("email") String email,
             @Param("registration_date") Timestamp registration_date);
 
-    @Delete("DELETE FROM coordinators WHERE uuid = #{uuid}")
+    @Delete("DELETE FROM coordinators WHERE uuid = #{uuid, jdbcType=OTHER}")
     void delete(@Param("uuid") UUID uuid);
 }

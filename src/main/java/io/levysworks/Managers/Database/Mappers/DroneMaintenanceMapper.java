@@ -9,8 +9,9 @@ import org.apache.ibatis.annotations.*;
 public interface DroneMaintenanceMapper {
     @Insert(
             "INSERT INTO drone_maintenance (uuid, drone_uuid, performed_by, maintenance_type,"
-                    + " description, performed_at) VALUES (#{uuid}, #{drone_uuid}, #{performed_by},"
-                    + " #{maintenance_type}, #{description}, #{performed_at})")
+                    + " description, performed_at) VALUES (#{uuid, jdbcType=OTHER}, #{drone_uuid,"
+                    + " jdbcType=OTHER}, #{performed_by, jdbcType=OTHER}, #{maintenance_type},"
+                    + " #{description}, #{performed_at})")
     void insert(
             @Param("uuid") UUID uuid,
             @Param("drone_uuid") UUID drone_uuid,
@@ -19,12 +20,12 @@ public interface DroneMaintenanceMapper {
             @Param("description") String description,
             @Param("performed_at") Timestamp performed_at);
 
-    @Select("SELECT * FROM drone_maintenance WHERE uuid = #{uuid}")
+    @Select("SELECT * FROM drone_maintenance WHERE uuid = #{uuid, jdbcType=OTHER}")
     DbDroneMaintenance findById(@Param("uuid") UUID uuid);
 
     @Update(
-            "UPDATE drone_maintenance SET drone_uuid = #{drone_uuid}, performed_by ="
-                    + " #{performed_by}, maintenance_type = #{maintenance_type}, description ="
+            "UPDATE drone_maintenance SET drone_uuid = #{drone_uuid, jdbcType=OTHER}, performed_by"
+                    + " = #{performed_by}, maintenance_type = #{maintenance_type}, description ="
                     + " #{description}, performed_at = #{performed_at} WHERE uuid = #{uuid}")
     void update(
             @Param("uuid") UUID uuid,
@@ -34,6 +35,6 @@ public interface DroneMaintenanceMapper {
             @Param("description") String description,
             @Param("performed_at") Timestamp performed_at);
 
-    @Delete("DELETE FROM drone_maintenance WHERE uuid = #{uuid}")
+    @Delete("DELETE FROM drone_maintenance WHERE uuid = #{uuid, jdbcType=OTHER}")
     void delete(@Param("uuid") UUID uuid);
 }

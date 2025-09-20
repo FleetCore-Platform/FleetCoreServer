@@ -9,7 +9,8 @@ import org.apache.ibatis.annotations.*;
 public interface LogFileMapper {
     @Insert(
             "INSERT INTO log_files (uuid, drone_uuid, created_at, archived, archived_date) VALUES"
-                    + " (#{uuid}, #{drone_uuid}, #{created_at}, #{archived}, #{archived_date})")
+                    + " (#{uuid, jdbcType=OTHER}, #{drone_uuid, jdbcType=OTHER}, #{created_at},"
+                    + " #{archived}, #{archived_date})")
     void insert(
             @Param("uuid") UUID uuid,
             @Param("drone_uuid") UUID drone_uuid,
@@ -17,12 +18,13 @@ public interface LogFileMapper {
             @Param("archived") Boolean archived,
             @Param("archived_date") Timestamp archived_date);
 
-    @Select("SELECT * FROM log_files WHERE uuid = #{uuid}")
+    @Select("SELECT * FROM log_files WHERE uuid = #{uuid, jdbcType=OTHER}")
     DbLogFile findById(@Param("uuid") UUID uuid);
 
     @Update(
-            "UPDATE log_files SET drone_uuid = #{drone_uuid}, created_at = #{created_at}, archived"
-                    + " = #{archived}, archived_date = #{archived_date} WHERE uuid = #{uuid}")
+            "UPDATE log_files SET drone_uuid = #{drone_uuid, jdbcType=OTHER}, created_at ="
+                + " #{created_at}, archived = #{archived}, archived_date = #{archived_date} WHERE"
+                + " uuid = #{uuid, jdbcType=OTHER}")
     void update(
             @Param("uuid") UUID uuid,
             @Param("drone_uuid") UUID drone_uuid,
@@ -30,6 +32,6 @@ public interface LogFileMapper {
             @Param("archived") Boolean archived,
             @Param("archived_date") Timestamp archived_date);
 
-    @Delete("DELETE FROM log_files WHERE uuid = #{uuid}")
+    @Delete("DELETE FROM log_files WHERE uuid = #{uuid, jdbcType=OTHER}")
     void delete(@Param("uuid") UUID uuid);
 }

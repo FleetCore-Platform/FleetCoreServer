@@ -10,8 +10,8 @@ import org.apache.ibatis.annotations.*;
 public interface OutpostMapper {
     @Insert(
             "INSERT INTO outposts (uuid, name, latitude, longitude, area, created_by, created_at)"
-                + " VALUES (#{uuid}, #{name}, #{latitude}, #{longitude}, ST_GeomFromText(#{area},"
-                + " 4326), #{created_by}, #{created_at})")
+                    + " VALUES (#{uuid, jdbcType=OTHER}, #{name}, #{latitude}, #{longitude},"
+                    + " ST_GeomFromText(#{area}, 4326), #{created_by}, #{created_at})")
     void insert(
             @Param("uuid") UUID uuid,
             @Param("name") String name,
@@ -23,7 +23,7 @@ public interface OutpostMapper {
 
     @Select(
             "SELECT uuid, name, latitude, longitude, ST_AsText(area) AS area, created_by,"
-                    + " created_at FROM outposts WHERE uuid = #{uuid}")
+                    + " created_at FROM outposts WHERE uuid = #{uuid, jdbcType=OTHER}")
     @Results({@Result(property = "area", column = "area")})
     DbOutpost findByUuid(@Param("uuid") UUID uuid);
 
@@ -33,6 +33,6 @@ public interface OutpostMapper {
     @Results({@Result(property = "area", column = "area")})
     DbOutpost findByName(@Param("name") String name);
 
-    @Delete("DELETE FROM outposts WHERE uuid = #{uuid}")
+    @Delete("DELETE FROM outposts WHERE uuid = #{uuid, jdbcType=OTHER}")
     void delete(@Param("uuid") UUID uuid);
 }
