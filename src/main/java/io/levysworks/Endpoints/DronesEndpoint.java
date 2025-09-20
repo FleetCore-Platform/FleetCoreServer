@@ -2,8 +2,8 @@ package io.levysworks.Endpoints;
 
 import io.levysworks.Managers.Database.DbModels.DbDrone;
 import io.levysworks.Managers.Database.Mappers.DroneMapper;
+import io.levysworks.Models.DroneRequestModel;
 import io.levysworks.Models.IoTCertContainer;
-import io.levysworks.Models.RegisterDroneRequestModel;
 import io.levysworks.Services.CoreService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -17,7 +17,6 @@ import java.util.logging.Logger;
 public class DronesEndpoint {
     @Inject CoreService coreService;
     @Inject DroneMapper droneMapper;
-
     Logger logger = Logger.getLogger(DronesEndpoint.class.getName());
 
     @GET
@@ -35,17 +34,35 @@ public class DronesEndpoint {
             UUID uuid = UUID.fromString(group_uuid);
             List<DbDrone> drones = droneMapper.listDronesByGroupUuid(uuid, limit);
             return Response.ok(drones).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
 
+    @GET
+    @Path("/{drone_uuid}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getDrone(@PathParam("drone_uuid") UUID drone_uuid) {
+        if (drone_uuid == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+
+        DbDrone drone = droneMapper.findByUuid(drone_uuid);
+        if (drone == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        return Response.ok(drone).build();
+    }
+
     @POST
     @Path("/register/")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response registerDrone(RegisterDroneRequestModel body) {
+    public Response registerDrone(DroneRequestModel body) {
         if (body == null
                 || body.groupName() == null
                 || body.droneName() == null
@@ -68,6 +85,26 @@ public class DronesEndpoint {
         } catch (NotFoundException nfe) {
             return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage())
                     .build();
+        } catch (Exception e) {
+            logger.severe(e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PATCH
+    @Path("/update/{drone_uuid}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateDrone(@PathParam("drone_uuid") String drone_uuid, DbDrone body) {
+        DbDrone droneCheck = droneMapper.findByUuid(UUID.fromString(drone_uuid));
+        if (droneCheck == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        try {
+            droneMapper.updateDrone(UUID.fromString(drone_uuid), body);
+
+            return Response.ok().build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();

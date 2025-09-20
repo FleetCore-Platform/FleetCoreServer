@@ -1,6 +1,6 @@
 package io.levysworks.Models;
 
-public record RegisterDroneRequestModel(
+public record DroneRequestModel(
         String groupName,
         String droneName,
         String address,
