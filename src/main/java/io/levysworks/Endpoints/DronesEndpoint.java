@@ -4,6 +4,7 @@ import io.levysworks.Managers.Database.DbModels.DbDrone;
 import io.levysworks.Managers.Database.Mappers.DroneMapper;
 import io.levysworks.Models.DroneRequestModel;
 import io.levysworks.Models.IoTCertContainer;
+import io.levysworks.Models.SetDroneGroupRequest;
 import io.levysworks.Services.CoreService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -95,16 +96,23 @@ public class DronesEndpoint {
     @Path("/update/{drone_uuid}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response updateDrone(@PathParam("drone_uuid") String drone_uuid, DbDrone body) {
+    public Response updateDrone(@PathParam("drone_uuid") String drone_uuid, DroneRequestModel body) {
+        if (drone_uuid == null || drone_uuid.isEmpty() || body == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+
         DbDrone droneCheck = droneMapper.findByUuid(UUID.fromString(drone_uuid));
         if (droneCheck == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
         try {
-            droneMapper.updateDrone(UUID.fromString(drone_uuid), body);
+            UUID uuid = UUID.fromString(drone_uuid);
+            coreService.updateDrone(uuid, body);
 
             return Response.ok().build();
+        } catch (IllegalArgumentException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -131,4 +139,53 @@ public class DronesEndpoint {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    @PATCH
+    @Path("/{drone_uuid}/ungroup/")
+    public Response ungroupDrone(@PathParam("drone_uuid") String drone_uuid) {
+        if (drone_uuid == null || drone_uuid.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+
+        try {
+            UUID uuid = UUID.fromString(drone_uuid);
+            coreService.removeDroneFromGroup(uuid);
+
+            return Response.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (NotFoundException nfe) {
+            return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage())
+                    .build();
+        } catch (Exception e) {
+            logger.severe(e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PATCH
+    @Path("/{drone_uuid}/group/")
+    public Response ungroupDrone(@PathParam("drone_uuid") String drone_uuid, SetDroneGroupRequest body) {
+        if (drone_uuid == null || body.group_uuid() == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+
+        try {
+            UUID uuid = UUID.fromString(drone_uuid);
+            UUID group_uuid = UUID.fromString(body.group_uuid());
+
+            coreService.addDroneToGroup(uuid, group_uuid);
+
+            return Response.noContent().build();
+        } catch (IllegalArgumentException ex) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (NotFoundException nfe) {
+            return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage())
+                    .build();
+        } catch (Exception e) {
+            logger.severe(e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 }

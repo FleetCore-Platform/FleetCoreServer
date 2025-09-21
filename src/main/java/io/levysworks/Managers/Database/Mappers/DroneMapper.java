@@ -37,6 +37,12 @@ public interface DroneMapper {
     @UpdateProvider(type = DbDroneUpdateProvider.class, method = "update")
     void updateDrone(@Param("uuid") UUID uuid, @Param("drone") DbDrone drone);
 
+    @Update("UPDATE drones SET group_uuid = null WHERE uuid = #{uuid, jdbcType=OTHER}")
+    void ungroupDrone(@Param("uuid") UUID uuid);
+
+    @Update("UPDATE drones SET group_uuid = #{group_uuid, jdbcType=OTHER} WHERE uuid = #{uuid, jdbcType=OTHER}")
+    void addToGroup(@Param("uuid") UUID uuid, @Param("group_uuid") UUID group_uuid);
+
     @Delete("DELETE FROM drones WHERE uuid = #{uuid, jdbcType=OTHER}")
     void deleteDrone(UUID uuid);
 }
