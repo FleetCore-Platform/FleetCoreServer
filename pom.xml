@@ -112,6 +112,14 @@
             <version>1.3.3</version>
         </dependency>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.levysworks</groupId>
             <artifactId>FleetCoreLib</artifactId>
             <version>1.0-SNAPSHOT</version>
@@ -145,6 +153,10 @@
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>iotdataplane</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.amazonservices</groupId>
+            <artifactId>quarkus-amazon-cognito-user-pools</artifactId>
         </dependency>
     </dependencies>
 
