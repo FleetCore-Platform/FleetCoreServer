@@ -108,7 +108,6 @@ public class CoreService {
 
         iotManager.removeThingFromGroup(drone.getName(), currentGroupARN);
         iotManager.addDeviceToGroup(drone.getName(), newGroupARN);
-
     }
 
     public void removeDrone(String droneName) throws NotFoundException {
@@ -155,7 +154,7 @@ public class CoreService {
             throw new NotFoundException("Drone not found with UUID " + droneUUID);
         }
         DbGroup dbGroup = groupMapper.findByUuid(groupUUID);
-        if  (dbGroup == null) {
+        if (dbGroup == null) {
             throw new NotFoundException("Group not found with UUID " + groupUUID);
         }
 
@@ -187,11 +186,12 @@ public class CoreService {
             throw new NotFoundException("Group not found with name " + groupName);
         }
 
-         if (!droneMapper.listDronesByGroupUuid(group.getUuid(), 1).isEmpty()) {
+        if (!droneMapper.listDronesByGroupUuid(group.getUuid(), 1).isEmpty()) {
             throw new GroupNotEmptyException("Group " + groupName + " is not empty");
-         };
-         iotManager.removeDeviceGroup(groupName);
-         groupMapper.deleteByName(groupName);
+        }
+        ;
+        iotManager.removeDeviceGroup(groupName);
+        groupMapper.deleteByName(groupName);
     }
 
     /**

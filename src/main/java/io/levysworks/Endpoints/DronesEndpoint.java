@@ -12,13 +12,11 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.jboss.resteasy.reactive.NoCache;
-
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
-
+import org.jboss.resteasy.reactive.NoCache;
 
 @NoCache
 @Path("/api/v1/drones/")
@@ -108,7 +106,8 @@ public class DronesEndpoint {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
-    public Response updateDrone(@PathParam("drone_uuid") String drone_uuid, DroneRequestModel body) {
+    public Response updateDrone(
+            @PathParam("drone_uuid") String drone_uuid, DroneRequestModel body) {
         if (drone_uuid == null || drone_uuid.isEmpty() || body == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
@@ -180,7 +179,8 @@ public class DronesEndpoint {
     @PATCH
     @Path("/{drone_uuid}/group/")
     @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
-    public Response ungroupDrone(@PathParam("drone_uuid") String drone_uuid, SetDroneGroupRequestModel body) {
+    public Response ungroupDrone(
+            @PathParam("drone_uuid") String drone_uuid, SetDroneGroupRequestModel body) {
         if (drone_uuid == null || body.group_uuid() == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
@@ -202,5 +202,4 @@ public class DronesEndpoint {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
-
 }

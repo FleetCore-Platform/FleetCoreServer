@@ -14,8 +14,6 @@ import java.util.concurrent.CompletionException;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.cognitoidentityprovider.model.DeleteGroupRequest;
-import software.amazon.awssdk.services.cognitoidentityprovider.model.DeleteGroupResponse;
 import software.amazon.awssdk.services.iot.IotAsyncClient;
 import software.amazon.awssdk.services.iot.model.*;
 import software.amazon.awssdk.services.sts.StsClient;
@@ -286,21 +284,22 @@ public class IotManager {
 
     public void removeDeviceGroup(String groupName) {
         DeleteThingGroupRequest deleteGroupRequest =
-                DeleteThingGroupRequest.builder()
-                        .thingGroupName(groupName)
-                        .build();
+                DeleteThingGroupRequest.builder().thingGroupName(groupName).build();
 
-        CompletableFuture<DeleteThingGroupResponse> future = iotAsyncClient.deleteThingGroup(deleteGroupRequest);
-        future.whenComplete((res, ex) -> {
-            if (ex != null) {
-                if (ex instanceof IotException) {
-                    System.err.println(((IotException) ex).awsErrorDetails().errorMessage());
-                }
-            }
-            if (res != null && res.sdkHttpResponse().isSuccessful()) {
-                System.out.println("Successfully removed group " + groupName);
-            }
-        });
+        CompletableFuture<DeleteThingGroupResponse> future =
+                iotAsyncClient.deleteThingGroup(deleteGroupRequest);
+        future.whenComplete(
+                (res, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof IotException) {
+                            System.err.println(
+                                    ((IotException) ex).awsErrorDetails().errorMessage());
+                        }
+                    }
+                    if (res != null && res.sdkHttpResponse().isSuccessful()) {
+                        System.out.println("Successfully removed group " + groupName);
+                    }
+                });
     }
 
     public void createIoTJob(
