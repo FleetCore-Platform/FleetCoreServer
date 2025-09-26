@@ -4,17 +4,25 @@ import io.levysworks.Managers.Database.DbModels.DbDrone;
 import io.levysworks.Managers.Database.Mappers.DroneMapper;
 import io.levysworks.Models.DroneRequestModel;
 import io.levysworks.Models.IoTCertContainer;
-import io.levysworks.Models.SetDroneGroupRequest;
+import io.levysworks.Models.SetDroneGroupRequestModel;
 import io.levysworks.Services.CoreService;
+import io.smallrye.faulttolerance.api.RateLimit;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.jboss.resteasy.reactive.NoCache;
+
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+
+@NoCache
 @Path("/api/v1/drones/")
+@RolesAllowed("${allowed.role-name}")
 public class DronesEndpoint {
     @Inject CoreService coreService;
     @Inject DroneMapper droneMapper;
@@ -23,6 +31,7 @@ public class DronesEndpoint {
     @GET
     @Path("/list/{group_uuid}")
     @Produces(MediaType.APPLICATION_JSON)
+    @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
     public Response listGroupDrones(
             @DefaultValue("10") @QueryParam("limit") int limit,
             @PathParam("group_uuid") String group_uuid) {
@@ -46,6 +55,7 @@ public class DronesEndpoint {
     @GET
     @Path("/{drone_uuid}")
     @Produces(MediaType.APPLICATION_JSON)
+    @RateLimit(value = 25, window = 1, windowUnit = ChronoUnit.SECONDS)
     public Response getDrone(@PathParam("drone_uuid") UUID drone_uuid) {
         if (drone_uuid == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -63,6 +73,7 @@ public class DronesEndpoint {
     @Path("/register/")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
     public Response registerDrone(DroneRequestModel body) {
         if (body == null
                 || body.groupName() == null
@@ -96,6 +107,7 @@ public class DronesEndpoint {
     @Path("/update/{drone_uuid}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
     public Response updateDrone(@PathParam("drone_uuid") String drone_uuid, DroneRequestModel body) {
         if (drone_uuid == null || drone_uuid.isEmpty() || body == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -122,6 +134,7 @@ public class DronesEndpoint {
     @DELETE
     @Path("/delete/{drone_name}")
     @Produces(MediaType.APPLICATION_JSON)
+    @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
     public Response deleteDrone(@PathParam("drone_name") String droneName) {
         if (droneName == null || droneName.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -142,6 +155,7 @@ public class DronesEndpoint {
 
     @PATCH
     @Path("/{drone_uuid}/ungroup/")
+    @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
     public Response ungroupDrone(@PathParam("drone_uuid") String drone_uuid) {
         if (drone_uuid == null || drone_uuid.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -165,7 +179,8 @@ public class DronesEndpoint {
 
     @PATCH
     @Path("/{drone_uuid}/group/")
-    public Response ungroupDrone(@PathParam("drone_uuid") String drone_uuid, SetDroneGroupRequest body) {
+    @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
+    public Response ungroupDrone(@PathParam("drone_uuid") String drone_uuid, SetDroneGroupRequestModel body) {
         if (drone_uuid == null || body.group_uuid() == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }

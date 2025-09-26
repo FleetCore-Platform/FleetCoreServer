@@ -8,15 +8,22 @@ import io.levysworks.Managers.Database.Mappers.OutpostMapper;
 import io.levysworks.Managers.IoTCore.IotManager;
 import io.levysworks.Models.GroupRequestModel;
 import io.levysworks.Services.CoreService;
+import io.smallrye.faulttolerance.api.RateLimit;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.jboss.resteasy.reactive.NoCache;
+
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+@NoCache
 @Path("/api/v1/groups/")
+@RolesAllowed("${allowed.role-name}")
 public class GroupsEndpoint {
     @Inject GroupMapper groupMapper;
     @Inject OutpostMapper outpostMapper;
@@ -27,6 +34,7 @@ public class GroupsEndpoint {
     @GET
     @Path("/list/{outpost_uuid}")
     @Produces(MediaType.APPLICATION_JSON)
+    @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
     public Response listGroups(@PathParam("outpost_uuid") String outpost_uuid) {
         if (outpost_uuid == null || outpost_uuid.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -52,6 +60,7 @@ public class GroupsEndpoint {
     @Path("/create/")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
     public Response createGroup(GroupRequestModel group) {
         if (group == null || group.outpost_uuid() == null || group.group_name() == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -85,6 +94,7 @@ public class GroupsEndpoint {
 
     @DELETE
     @Path("/delete/{group_uuid}")
+    @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
     public Response deleteGroup(@PathParam("group_uuid") String group_uuid) {
         if (group_uuid == null || group_uuid.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST).build();

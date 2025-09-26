@@ -14,6 +14,9 @@ public interface ApplicationConfig {
     @WithName("iot")
     IoTCoreConfig iot();
 
+    @WithName("cognito")
+    CognitoConfig cognito();
+
     interface S3Config {
         @WithName("bucket-name")
         String bucketName();
@@ -31,5 +34,10 @@ public interface ApplicationConfig {
 
         @WithName("new-mission-job-arn")
         String newMissionJobArn();
+    }
+
+    interface CognitoConfig {
+        @WithName("user-pool-id")
+        String userPoolId();
     }
 }
