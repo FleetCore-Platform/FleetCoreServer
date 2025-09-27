@@ -1,3 +1,5 @@
 package io.levysworks.Models;
 
-public record GroupRequestModel(String outpost_uuid, String group_name) {}
+import java.util.UUID;
+
+public record GroupRequestModel(UUID outpost_uuid, String group_name) {}

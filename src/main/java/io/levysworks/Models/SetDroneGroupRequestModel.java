@@ -1,3 +1,5 @@
 package io.levysworks.Models;
 
-public record SetDroneGroupRequestModel(String group_uuid) {}
+import java.util.UUID;
+
+public record SetDroneGroupRequestModel(UUID group_uuid) {}
