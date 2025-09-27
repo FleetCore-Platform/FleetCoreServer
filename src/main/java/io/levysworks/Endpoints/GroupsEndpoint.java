@@ -9,7 +9,6 @@ import io.levysworks.Managers.IoTCore.IotManager;
 import io.levysworks.Models.GroupRequestModel;
 import io.levysworks.Services.CoreService;
 import io.smallrye.faulttolerance.api.RateLimit;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -22,7 +21,7 @@ import org.jboss.resteasy.reactive.NoCache;
 
 @NoCache
 @Path("/api/v1/groups/")
-@RolesAllowed("${allowed.role-name}")
+// @RolesAllowed("${allowed.role-name}")
 public class GroupsEndpoint {
     @Inject GroupMapper groupMapper;
     @Inject OutpostMapper outpostMapper;
@@ -34,21 +33,14 @@ public class GroupsEndpoint {
     @Path("/list/{outpost_uuid}")
     @Produces(MediaType.APPLICATION_JSON)
     @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
-    public Response listGroups(@PathParam("outpost_uuid") String outpost_uuid) {
-        if (outpost_uuid == null || outpost_uuid.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
+    public Response listGroups(@PathParam("outpost_uuid") UUID outpost_uuid) {
         try {
-            UUID uuid = UUID.fromString(outpost_uuid);
-
-            List<DbGroup> groups = groupMapper.listGroupsByOutpostUuid(uuid);
+            List<DbGroup> groups = groupMapper.listGroupsByOutpostUuid(outpost_uuid);
             if (groups == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
             return Response.ok(groups).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -71,8 +63,7 @@ public class GroupsEndpoint {
         }
 
         try {
-            UUID outpost_uuid = UUID.fromString(group.outpost_uuid());
-            DbOutpost outpost = outpostMapper.findByUuid(outpost_uuid);
+            DbOutpost outpost = outpostMapper.findByUuid(group.outpost_uuid());
 
             if (outpost == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();
@@ -81,8 +72,6 @@ public class GroupsEndpoint {
             coreService.createNewGroup(group.group_name(), group.outpost_uuid());
 
             return Response.status(Response.Status.CREATED).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
         } catch (NotFoundException nfe) {
             return Response.status(Response.Status.NOT_FOUND).build();
         } catch (Exception e) {
@@ -93,16 +82,11 @@ public class GroupsEndpoint {
 
     @DELETE
     @Path("/delete/{group_uuid}")
+    @Produces(MediaType.APPLICATION_JSON)
     @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
-    public Response deleteGroup(@PathParam("group_uuid") String group_uuid) {
-        if (group_uuid == null || group_uuid.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-
+    public Response deleteGroup(@PathParam("group_uuid") UUID group_uuid) {
         try {
-            UUID uuid = UUID.fromString(group_uuid);
-
-            DbGroup group = groupMapper.findByUuid(uuid);
+            DbGroup group = groupMapper.findByUuid(group_uuid);
 
             if (group == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();
@@ -113,11 +97,20 @@ public class GroupsEndpoint {
             return Response.status(Response.Status.NO_CONTENT).build();
         } catch (GroupNotEmptyException gne) {
             return Response.status(Response.Status.NOT_MODIFIED).build();
-        } catch (IllegalArgumentException ex) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    //    @PATCH
+    //    @Path("/update/{group_uuid}")
+    //    @Produces(MediaType.APPLICATION_JSON)
+    //    @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
+    //    public Response updateGroup(@PathParam("group_uuid") String group_uuid) {
+    //        if (group_uuid == null || group_uuid.isEmpty()) {
+    //            return Response.status(Response.Status.BAD_REQUEST).build();
+    //        }
+    //
+    //    }
 }

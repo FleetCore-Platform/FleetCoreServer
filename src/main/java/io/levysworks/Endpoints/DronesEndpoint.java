@@ -7,7 +7,6 @@ import io.levysworks.Models.IoTCertContainer;
 import io.levysworks.Models.SetDroneGroupRequestModel;
 import io.levysworks.Services.CoreService;
 import io.smallrye.faulttolerance.api.RateLimit;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -16,11 +15,16 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.jboss.resteasy.reactive.NoCache;
 
 @NoCache
 @Path("/api/v1/drones/")
-@RolesAllowed("${allowed.role-name}")
+// @RolesAllowed("${allowed.role-name}")
 public class DronesEndpoint {
     @Inject CoreService coreService;
     @Inject DroneMapper droneMapper;
@@ -32,18 +36,19 @@ public class DronesEndpoint {
     @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
     public Response listGroupDrones(
             @DefaultValue("10") @QueryParam("limit") int limit,
-            @PathParam("group_uuid") String group_uuid) {
+            @PathParam("group_uuid") UUID group_uuid) {
 
         if (limit <= 0 || limit > 1000) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
         try {
-            UUID uuid = UUID.fromString(group_uuid);
-            List<DbDrone> drones = droneMapper.listDronesByGroupUuid(uuid, limit);
+            List<DbDrone> drones = droneMapper.listDronesByGroupUuid(group_uuid, limit);
+            if (drones == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
             return Response.ok(drones).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -55,16 +60,17 @@ public class DronesEndpoint {
     @Produces(MediaType.APPLICATION_JSON)
     @RateLimit(value = 25, window = 1, windowUnit = ChronoUnit.SECONDS)
     public Response getDrone(@PathParam("drone_uuid") UUID drone_uuid) {
-        if (drone_uuid == null) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
+        try {
+            DbDrone drone = droneMapper.findByUuid(drone_uuid);
+            if (drone == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
 
-        DbDrone drone = droneMapper.findByUuid(drone_uuid);
-        if (drone == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
+            return Response.ok(drone).build();
+        } catch (Exception e) {
+            logger.severe(e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
-
-        return Response.ok(drone).build();
     }
 
     @POST
@@ -106,24 +112,23 @@ public class DronesEndpoint {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
-    public Response updateDrone(
-            @PathParam("drone_uuid") String drone_uuid, DroneRequestModel body) {
-        if (drone_uuid == null || drone_uuid.isEmpty() || body == null) {
+    public Response updateDrone(@PathParam("drone_uuid") UUID drone_uuid, DroneRequestModel body) {
+        if (body == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
-        DbDrone droneCheck = droneMapper.findByUuid(UUID.fromString(drone_uuid));
+        DbDrone droneCheck = droneMapper.findByUuid(drone_uuid);
         if (droneCheck == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
         try {
-            UUID uuid = UUID.fromString(drone_uuid);
-            coreService.updateDrone(uuid, body);
+            coreService.updateDrone(drone_uuid, body);
 
             return Response.ok().build();
-        } catch (IllegalArgumentException ex) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (NotFoundException nfe) {
+            return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage())
+                    .build();
         } catch (Exception e) {
             logger.severe(e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -154,19 +159,14 @@ public class DronesEndpoint {
 
     @PATCH
     @Path("/{drone_uuid}/ungroup/")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
-    public Response ungroupDrone(@PathParam("drone_uuid") String drone_uuid) {
-        if (drone_uuid == null || drone_uuid.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-
+    public Response ungroupDrone(@PathParam("drone_uuid") UUID drone_uuid) {
         try {
-            UUID uuid = UUID.fromString(drone_uuid);
-            coreService.removeDroneFromGroup(uuid);
+            coreService.removeDroneFromGroup(drone_uuid);
 
             return Response.noContent().build();
-        } catch (IllegalArgumentException ex) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
         } catch (NotFoundException nfe) {
             return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage())
                     .build();
@@ -179,21 +179,18 @@ public class DronesEndpoint {
     @PATCH
     @Path("/{drone_uuid}/group/")
     @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response ungroupDrone(
-            @PathParam("drone_uuid") String drone_uuid, SetDroneGroupRequestModel body) {
-        if (drone_uuid == null || body.group_uuid() == null) {
+            @PathParam("drone_uuid") UUID drone_uuid, SetDroneGroupRequestModel body) {
+        if (body == null || body.group_uuid() == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
         try {
-            UUID uuid = UUID.fromString(drone_uuid);
-            UUID group_uuid = UUID.fromString(body.group_uuid());
-
-            coreService.addDroneToGroup(uuid, group_uuid);
+            coreService.addDroneToGroup(drone_uuid, body.group_uuid());
 
             return Response.noContent().build();
-        } catch (IllegalArgumentException ex) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
         } catch (NotFoundException nfe) {
             return Response.status(Response.Status.NOT_FOUND.getStatusCode(), nfe.getMessage())
                     .build();
