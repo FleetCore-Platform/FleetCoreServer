@@ -34,6 +34,21 @@ public class DronesEndpoint {
     @Path("/list/{group_uuid}")
     @Produces(MediaType.APPLICATION_JSON)
     @RateLimit(value = 10, window = 5, windowUnit = ChronoUnit.SECONDS)
+    @APIResponses(
+            value = {
+                @APIResponse(
+                        responseCode = "200",
+                        description = "Success",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema =
+                                                @Schema(
+                                                        type = SchemaType.ARRAY,
+                                                        implementation = DbDrone.class))),
+                @APIResponse(responseCode = "400", description = "Bad request"),
+                @APIResponse(responseCode = "500", description = "Internal server error")
+            })
     public Response listGroupDrones(
             @DefaultValue("10") @QueryParam("limit") int limit,
             @PathParam("group_uuid") UUID group_uuid) {
