@@ -12,7 +12,9 @@ import io.levysworks.Managers.IoTCore.IotDataPlaneManager;
 import io.levysworks.Managers.IoTCore.IotManager;
 import io.levysworks.Managers.S3.StorageManager;
 import io.levysworks.Models.DroneRequestModel;
+import io.levysworks.Models.GroupRequestModel;
 import io.levysworks.Models.IoTCertContainer;
+import io.levysworks.Models.UpdateGroupOutpostModel;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -76,10 +78,10 @@ public class CoreService {
         return certContainer;
     }
 
-    public void updateDrone(UUID drone_uuid, DroneRequestModel data) throws NotFoundException {
-        DbDrone drone = droneMapper.findByUuid(drone_uuid);
+    public void updateDrone(UUID droneUuid, DroneRequestModel data) throws NotFoundException {
+        DbDrone drone = droneMapper.findByUuid(droneUuid);
         if (drone == null) {
-            throw new NotFoundException("Drone not found with UUID " + drone_uuid);
+            throw new NotFoundException("Drone not found with UUID " + droneUuid);
         }
 
         DbGroup currentGroup = groupMapper.findByUuid(drone.getGroup_uuid());
@@ -104,7 +106,7 @@ public class CoreService {
             drone.setGroup_uuid(dbGroup.getUuid());
         }
 
-        droneMapper.updateDrone(drone_uuid, drone);
+        droneMapper.updateDrone(droneUuid, drone);
 
         iotManager.removeThingFromGroup(drone.getName(), currentGroupARN);
         iotManager.addDeviceToGroup(drone.getName(), newGroupARN);
@@ -164,19 +166,19 @@ public class CoreService {
         iotManager.addDeviceToGroup(dbDrone.getName(), groupARN);
     }
 
-    public void createNewGroup(String groupName, String outpostUuid) throws NotFoundException {
+    public void createNewGroup(String groupName, UUID outpostUuid) throws NotFoundException {
         UUID groupUUID = UUID.randomUUID();
-        DbOutpost dbOutpost = outpostMapper.findByUuid(UUID.fromString(outpostUuid));
+        DbOutpost dbOutpost = outpostMapper.findByUuid(outpostUuid);
 
         if (dbOutpost == null) {
-            throw new NotFoundException("Outpost not found with UUID " + outpostUuid);
+            throw new NotFoundException("Outpost not found with UUID " + outpostUuid.toString());
         }
 
         String outpostName = dbOutpost.getName();
 
         Timestamp createdDate = new Timestamp(System.currentTimeMillis());
 
-        iotManager.createDeviceGroup(groupName, outpostName);
+        iotManager.createThingGroup(groupName, outpostName);
         groupMapper.insert(groupUUID, dbOutpost.getUuid(), groupName, createdDate);
     }
 
@@ -190,8 +192,24 @@ public class CoreService {
             throw new GroupNotEmptyException("Group " + groupName + " is not empty");
         }
         ;
-        iotManager.removeDeviceGroup(groupName);
+        iotManager.removeThingGroup(groupName);
         groupMapper.deleteByName(groupName);
+    }
+
+    public void updateGroup(UUID groupUuid, UpdateGroupOutpostModel data) throws NotFoundException {
+        DbGroup group = groupMapper.findByUuid(groupUuid);
+        DbOutpost outpost = outpostMapper.findByUuid(data.outpost_uuid());
+
+        if (group == null) {
+            throw new NotFoundException("Group not found with UUID " + groupUuid.toString());
+        }
+        if (outpost == null) {
+            throw new NotFoundException("Outpost not found with UUID" + data.outpost_uuid());
+        }
+
+        groupMapper.updateGroupOutpost(groupUuid, data.outpost_uuid());
+        iotManager.updateThingGroupOutpost(group.getName(), outpost.getName());
+
     }
 
     /**

@@ -5,8 +5,8 @@ import io.levysworks.Managers.Database.DbModels.DbGroup;
 import io.levysworks.Managers.Database.DbModels.DbOutpost;
 import io.levysworks.Managers.Database.Mappers.GroupMapper;
 import io.levysworks.Managers.Database.Mappers.OutpostMapper;
-import io.levysworks.Managers.IoTCore.IotManager;
 import io.levysworks.Models.GroupRequestModel;
+import io.levysworks.Models.UpdateGroupOutpostModel;
 import io.levysworks.Services.CoreService;
 import io.smallrye.faulttolerance.api.RateLimit;
 import jakarta.inject.Inject;
@@ -25,7 +25,6 @@ import org.jboss.resteasy.reactive.NoCache;
 public class GroupsEndpoint {
     @Inject GroupMapper groupMapper;
     @Inject OutpostMapper outpostMapper;
-    @Inject IotManager iotManager;
     @Inject CoreService coreService;
     Logger logger = Logger.getLogger(GroupsEndpoint.class.getName());
 
@@ -103,14 +102,26 @@ public class GroupsEndpoint {
         }
     }
 
-    //    @PATCH
-    //    @Path("/update/{group_uuid}")
-    //    @Produces(MediaType.APPLICATION_JSON)
-    //    @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
-    //    public Response updateGroup(@PathParam("group_uuid") String group_uuid) {
-    //        if (group_uuid == null || group_uuid.isEmpty()) {
-    //            return Response.status(Response.Status.BAD_REQUEST).build();
-    //        }
-    //
-    //    }
+        @PATCH
+        @Path("/update/{group_uuid}")
+        @Consumes(MediaType.APPLICATION_JSON)
+        @Produces(MediaType.APPLICATION_JSON)
+        @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
+        public Response updateGroup(@PathParam("group_uuid") UUID group_uuid, UpdateGroupOutpostModel body) {
+            if (body == null || body.outpost_uuid() == null) {
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
+
+            try {
+                coreService.updateGroup(group_uuid, body);
+
+                return Response.noContent().build();
+            } catch (NotFoundException nfe) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            } catch (Exception e) {
+                logger.severe(e.getMessage());
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            }
+
+        }
 }

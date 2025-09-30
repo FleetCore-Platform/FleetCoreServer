@@ -254,7 +254,7 @@ public class IotManager {
                 });
     }
 
-    public void createDeviceGroup(String groupName, String outpostName) {
+    public void createThingGroup(String groupName, String outpostName) {
         CreateThingGroupRequest createThingGroupRequest =
                 CreateThingGroupRequest.builder()
                         .thingGroupProperties(
@@ -282,7 +282,7 @@ public class IotManager {
         future.join();
     }
 
-    public void removeDeviceGroup(String groupName) {
+    public void removeThingGroup(String groupName) {
         DeleteThingGroupRequest deleteGroupRequest =
                 DeleteThingGroupRequest.builder().thingGroupName(groupName).build();
 
@@ -300,6 +300,39 @@ public class IotManager {
                         System.out.println("Successfully removed group " + groupName);
                     }
                 });
+    }
+
+    public void updateThingGroupOutpost(String groupName, String newOutpostName) {
+        UpdateThingGroupRequest updateThingGroupRequest =
+                UpdateThingGroupRequest.builder()
+                        .thingGroupName(groupName)
+                        .thingGroupProperties(
+                                ThingGroupProperties.builder()
+                                        .attributePayload(
+                                                AttributePayload.builder()
+                                                        .attributes(Map.of("outpost", newOutpostName))
+                                                        .build()
+                                        )
+                                        .build()
+                        ).build();
+
+
+        CompletableFuture<UpdateThingGroupResponse> future =
+                iotAsyncClient.updateThingGroup(updateThingGroupRequest);
+        future.whenComplete(
+                (res, ex) -> {
+                    if (ex != null) {
+                        if (ex instanceof IotException) {
+                            System.err.println(
+                                    ((IotException) ex).awsErrorDetails().errorMessage());
+                        }
+                    }
+                    if (res != null && res.sdkHttpResponse().isSuccessful()) {
+                        System.out.println("Successfully updated group " + groupName);
+                    }
+                });
+
+        future.join();
     }
 
     public void createIoTJob(
