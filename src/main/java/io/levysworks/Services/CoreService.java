@@ -12,7 +12,6 @@ import io.levysworks.Managers.IoTCore.IotDataPlaneManager;
 import io.levysworks.Managers.IoTCore.IotManager;
 import io.levysworks.Managers.S3.StorageManager;
 import io.levysworks.Models.DroneRequestModel;
-import io.levysworks.Models.GroupRequestModel;
 import io.levysworks.Models.IoTCertContainer;
 import io.levysworks.Models.UpdateGroupOutpostModel;
 import io.quarkus.runtime.Startup;
@@ -209,7 +208,6 @@ public class CoreService {
 
         groupMapper.updateGroupOutpost(groupUuid, data.outpost_uuid());
         iotManager.updateThingGroupOutpost(group.getName(), outpost.getName());
-
     }
 
     /**

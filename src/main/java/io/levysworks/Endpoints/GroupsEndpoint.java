@@ -102,26 +102,26 @@ public class GroupsEndpoint {
         }
     }
 
-        @PATCH
-        @Path("/update/{group_uuid}")
-        @Consumes(MediaType.APPLICATION_JSON)
-        @Produces(MediaType.APPLICATION_JSON)
-        @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
-        public Response updateGroup(@PathParam("group_uuid") UUID group_uuid, UpdateGroupOutpostModel body) {
-            if (body == null || body.outpost_uuid() == null) {
-                return Response.status(Response.Status.BAD_REQUEST).build();
-            }
-
-            try {
-                coreService.updateGroup(group_uuid, body);
-
-                return Response.noContent().build();
-            } catch (NotFoundException nfe) {
-                return Response.status(Response.Status.NOT_FOUND).build();
-            } catch (Exception e) {
-                logger.severe(e.getMessage());
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            }
-
+    @PATCH
+    @Path("/update/{group_uuid}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @RateLimit(value = 3, window = 1, windowUnit = ChronoUnit.MINUTES)
+    public Response updateGroup(
+            @PathParam("group_uuid") UUID group_uuid, UpdateGroupOutpostModel body) {
+        if (body == null || body.outpost_uuid() == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
         }
+
+        try {
+            coreService.updateGroup(group_uuid, body);
+
+            return Response.noContent().build();
+        } catch (NotFoundException nfe) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        } catch (Exception e) {
+            logger.severe(e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

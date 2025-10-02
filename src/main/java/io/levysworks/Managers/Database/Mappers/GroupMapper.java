@@ -4,7 +4,6 @@ import io.levysworks.Managers.Database.DbModels.DbGroup;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
-
 import org.apache.ibatis.annotations.*;
 
 @Mapper
@@ -36,7 +35,9 @@ public interface GroupMapper {
             @Param("name") String name,
             @Param("created_at") Timestamp created_at);
 
-    @Update("UPDATE groups SET outpost_uuid = #{outpost_uuid, jdbcType=OTHER} WHERE uuid = #{uuid, jdbcType=OTHER}")
+    @Update(
+            "UPDATE groups SET outpost_uuid = #{outpost_uuid, jdbcType=OTHER} WHERE uuid = #{uuid,"
+                    + " jdbcType=OTHER}")
     void updateGroupOutpost(@Param("uuid") UUID uuid, @Param("outpost_uuid") UUID outpost_uuid);
 
     @Delete("DELETE FROM groups WHERE uuid = #{uuid, jdbcType=OTHER}")

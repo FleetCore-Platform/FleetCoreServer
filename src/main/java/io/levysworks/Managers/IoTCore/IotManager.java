@@ -310,12 +310,11 @@ public class IotManager {
                                 ThingGroupProperties.builder()
                                         .attributePayload(
                                                 AttributePayload.builder()
-                                                        .attributes(Map.of("outpost", newOutpostName))
-                                                        .build()
-                                        )
-                                        .build()
-                        ).build();
-
+                                                        .attributes(
+                                                                Map.of("outpost", newOutpostName))
+                                                        .build())
+                                        .build())
+                        .build();
 
         CompletableFuture<UpdateThingGroupResponse> future =
                 iotAsyncClient.updateThingGroup(updateThingGroupRequest);
