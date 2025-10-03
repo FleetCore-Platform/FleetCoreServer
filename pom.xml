@@ -123,14 +123,12 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-smallrye-health</artifactId>
         </dependency>
-
-        <!-- AWS SDK dependencies -->
         <dependency>
             <groupId>io.levysworks</groupId>
             <artifactId>FleetCoreLib</artifactId>
             <version>1.0-SNAPSHOT</version>
-            
         </dependency>
+        <!-- AWS SDK dependencies -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>bom</artifactId>
@@ -162,6 +160,11 @@
         <dependency>
             <groupId>io.quarkiverse.amazonservices</groupId>
             <artifactId>quarkus-amazon-cognito-user-pools</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.logging.cloudwatch</groupId>
+            <artifactId>quarkus-logging-cloudwatch</artifactId>
+            <version>6.14.2</version>
         </dependency>
     </dependencies>
 
