@@ -1,6 +1,8 @@
 package io.levysworks.Managers.Database.Mappers;
 
 import io.levysworks.Managers.Database.DbModels.DbCoordinator;
+import io.levysworks.Managers.Database.Providers.DbCoordinatorUpdateProvider;
+import io.levysworks.Models.UpdateCoordinatorModel;
 import java.sql.Timestamp;
 import java.util.UUID;
 import org.apache.ibatis.annotations.*;
@@ -22,17 +24,8 @@ public interface CoordinatorMapper {
     @Select("SELECT * FROM coordinators WHERE uuid = #{uuid, jdbcType=OTHER}")
     DbCoordinator findByUuid(@Param("uuid") UUID uuid);
 
-    @Update(
-            "UPDATE coordinators SET cognito_sub = #{cognito_sub}, first_name = #{first_name},"
-                    + " last_name = #{last_name}, email = #{email}, registration_date ="
-                    + " #{registration_date} WHERE uuid = #{uuid, jdbcType=OTHER}")
-    void update(
-            @Param("uuid") UUID uuid,
-            @Param("cognito_sub") String cognito_sub,
-            @Param("first_name") String first_name,
-            @Param("last_name") String last_name,
-            @Param("email") String email,
-            @Param("registration_date") Timestamp registration_date);
+    @UpdateProvider(type = DbCoordinatorUpdateProvider.class, method = "update")
+    void update(@Param("uuid") UUID uuid, @Param("coordinator") UpdateCoordinatorModel coordinator);
 
     @Delete("DELETE FROM coordinators WHERE uuid = #{uuid, jdbcType=OTHER}")
     void delete(@Param("uuid") UUID uuid);

@@ -7,9 +7,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -75,11 +73,74 @@ public class CognitoManager {
                 return new CognitoCreatedResponse(
                         tempPassword, response.user().attributes().getLast().value());
             } else {
+                logger.warning("Failed to create user: " + response.sdkHttpResponse().statusText());
                 return null;
             }
 
-        } catch (SdkException ignored) {
+        } catch (Exception e) {
+            logger.severe("Failed to create user: " + e.getMessage());
             return null;
+        }
+    }
+
+    public void updateUser(String email, String firstName, String lastName) throws SdkException {
+        List<AttributeType> attributes = new ArrayList<>();
+
+        if (firstName != null) {
+            logger.info("Setting first name: " + firstName);
+            attributes.add(AttributeType.builder().name("given_name").value(firstName).build());
+        }
+        if (lastName != null) {
+            logger.info("Setting last name: " + lastName);
+            attributes.add(AttributeType.builder().name("family_name").value(lastName).build());
+        }
+
+        AdminUpdateUserAttributesRequest request =
+                AdminUpdateUserAttributesRequest.builder()
+                        .userPoolId(config.cognito().userPoolId())
+                        .username(email)
+                        .userAttributes(attributes)
+                        .build();
+
+        CompletableFuture<AdminUpdateUserAttributesResponse> future =
+                client.adminUpdateUserAttributes(request);
+
+        try {
+            AdminUpdateUserAttributesResponse response = future.join();
+
+            if (response.sdkHttpResponse().isSuccessful()) {
+                logger.info(
+                        "Successfully updated user: " + response.sdkHttpResponse().statusText());
+            } else {
+                logger.warning("Failed to update user: " + response.sdkHttpResponse().statusText());
+            }
+        } catch (Exception e) {
+            logger.severe("Failed to update user: " + e.getMessage());
+        }
+    }
+
+    public void removeUser(String email) throws SdkException {
+        AdminDeleteUserRequest adminDeleteUserRequest =
+                AdminDeleteUserRequest.builder()
+                        .userPoolId(config.cognito().userPoolId())
+                        .username(email)
+                        .build();
+
+        CompletableFuture<AdminDeleteUserResponse> future =
+                client.adminDeleteUser(adminDeleteUserRequest);
+
+        try {
+            AdminDeleteUserResponse response = future.join();
+
+            if (response.sdkHttpResponse().isSuccessful()) {
+                logger.info("Successfully removed cognito user " + email);
+            }
+
+        } catch (SdkException e) {
+            logger.severe("Failed to remove cognito user: " + e.getMessage());
+            throw e;
+        } catch (Exception ex) {
+            logger.severe("Failed to remove cognito user: " + ex.getMessage());
         }
     }
 }

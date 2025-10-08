@@ -3,7 +3,9 @@ package io.levysworks.Services;
 import io.levysworks.Algorithms.PolygonCoverageAlgorithm;
 import io.levysworks.Configs.ApplicationConfig;
 import io.levysworks.Exceptions.GroupNotEmptyException;
+import io.levysworks.Managers.Cognito.CognitoManager;
 import io.levysworks.Managers.Database.DatabaseManager;
+import io.levysworks.Managers.Database.DbModels.DbCoordinator;
 import io.levysworks.Managers.Database.DbModels.DbDrone;
 import io.levysworks.Managers.Database.DbModels.DbGroup;
 import io.levysworks.Managers.Database.DbModels.DbOutpost;
@@ -11,9 +13,7 @@ import io.levysworks.Managers.Database.Mappers.*;
 import io.levysworks.Managers.IoTCore.IotDataPlaneManager;
 import io.levysworks.Managers.IoTCore.IotManager;
 import io.levysworks.Managers.S3.StorageManager;
-import io.levysworks.Models.DroneRequestModel;
-import io.levysworks.Models.IoTCertContainer;
-import io.levysworks.Models.UpdateGroupOutpostModel;
+import io.levysworks.Models.*;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -21,8 +21,10 @@ import jakarta.ws.rs.NotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import org.jboss.logging.Logger;
 import org.postgis.Geometry;
 
 @Startup
@@ -32,12 +34,14 @@ public class CoreService {
     @Inject IotDataPlaneManager iotDataPlaneManager;
     @Inject DatabaseManager dbManager;
     @Inject StorageManager storageManager;
+    @Inject CognitoManager cognitoManager;
     @Inject ApplicationConfig config;
     @Inject DroneMapper droneMapper;
     @Inject GroupMapper groupMapper;
     @Inject OutpostMapper outpostMapper;
     @Inject MissionMapper missionMapper;
     @Inject CoordinatorMapper coordinatorMapper;
+    @Inject Logger logger;
 
     /**
      * Groups multiple manager operations to register a new drone in IoT Core, and RDS
@@ -208,6 +212,44 @@ public class CoreService {
 
         groupMapper.updateGroupOutpost(groupUuid, data.outpost_uuid());
         iotManager.updateThingGroupOutpost(group.getName(), outpost.getName());
+    }
+
+    public CognitoCreatedResponse registerNewCoordinator(
+            String email, String firstName, String lastName) {
+        CognitoCreatedResponse cognitoUser = cognitoManager.createUser(email, firstName, lastName);
+
+        if (cognitoUser == null) {
+            return null;
+        }
+
+        UUID uuid = UUID.randomUUID();
+        Timestamp timestamp = Timestamp.from(Instant.now());
+
+        coordinatorMapper.insert(
+                uuid, cognitoUser.cognito_sub(), firstName, lastName, email, timestamp);
+
+        return cognitoUser;
+    }
+
+    public void updateCoordinator(
+            UUID coordinatorUuid, UpdateCoordinatorModel updateCoordinatorModel)
+            throws NotFoundException {
+        DbCoordinator coordinator = coordinatorMapper.findByUuid(coordinatorUuid);
+        if (coordinator == null) {
+            throw new NotFoundException(
+                    "Coordinator not found with UUID " + coordinatorUuid.toString());
+        }
+
+        cognitoManager.updateUser(
+                coordinator.getEmail(),
+                updateCoordinatorModel.firstName(),
+                updateCoordinatorModel.lastName());
+
+        try {
+            coordinatorMapper.update(coordinatorUuid, updateCoordinatorModel);
+        } catch (Exception ex) {
+            logger.errorf("Error updating coordinator %s", ex.getMessage());
+        }
     }
 
     /**
