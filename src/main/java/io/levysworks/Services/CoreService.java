@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.jboss.logging.Logger;
 import org.postgis.Geometry;
+import software.amazon.awssdk.services.iot.model.JobExecutionStatus;
 
 @Startup
 @ApplicationScoped
@@ -294,4 +295,20 @@ public class CoreService {
                 startedAt,
                 UUID.fromString(coordinatorUUID));
     }
+
+        public JobExecutionStatus getMissionStatus(UUID droneUuid) throws NotFoundException {
+            DbDrone drone =  droneMapper.findByUuid(droneUuid);
+            if (drone == null) {
+                throw new NotFoundException("Drone not found with UUID " + droneUuid.toString());
+            }
+
+            String thingName = drone.getName();
+
+            String lastJopId = iotManager.getLastJobId(thingName);
+            if (lastJopId == null) {
+                return null;
+            }
+
+            return iotManager.getJobExecutionStatus(lastJopId, thingName);
+        }
 }

@@ -81,6 +81,22 @@ public class IotManager {
         return response.join().execution().status();
     }
 
+    public String getLastJobId(String thingName) {
+        ListJobExecutionsForThingRequest listJobExecutionsForThingRequest =
+                ListJobExecutionsForThingRequest.builder().thingName(thingName).build();
+
+        CompletableFuture<ListJobExecutionsForThingResponse> future =
+                iotAsyncClient.listJobExecutionsForThing(listJobExecutionsForThingRequest);
+
+        try {
+            ListJobExecutionsForThingResponse response = future.join();
+
+            return response.executionSummaries().getFirst().jobId();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public void addDeviceToGroup(String thingName, String groupARN) {
         AddThingToThingGroupRequest addThingToThingGroupRequest =
                 AddThingToThingGroupRequest.builder()
