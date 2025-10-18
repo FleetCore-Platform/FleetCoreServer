@@ -112,8 +112,14 @@ public class StorageManager {
         }
     }
 
-    public String uploadMissionBundle(String bundleUUID, File missionBundle) {
-        String bundleKey = bundleUUID + ".bundle.zip";
+    /**
+     * Uploads an object to AWS S3
+     * @param bundlePath The full name of the object, can use <b>/</b> for folders
+     * @param missionBundle The actual file to upload to the bucket
+     * @return The key of the created S3 object
+     */
+    public String uploadMissionBundle(String bundlePath, File missionBundle) {
+        String bundleKey = bundlePath + ".bundle.zip";
 
         try {
             PutObjectResponse response =
