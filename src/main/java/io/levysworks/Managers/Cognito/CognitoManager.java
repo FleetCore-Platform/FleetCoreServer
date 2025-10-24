@@ -1,7 +1,7 @@
 package io.levysworks.Managers.Cognito;
 
 import io.levysworks.Configs.ApplicationConfig;
-import io.levysworks.Models.CognitoCreatedResponse;
+import io.levysworks.Models.CognitoCreatedResponseModel;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -39,7 +39,7 @@ public class CognitoManager {
         client.close();
     }
 
-    public CognitoCreatedResponse createUser(String email, String firstName, String lastName)
+    public CognitoCreatedResponseModel createUser(String email, String firstName, String lastName)
             throws SdkException {
         AttributeType emailAttribute = AttributeType.builder().name("email").value(email).build();
 
@@ -70,7 +70,7 @@ public class CognitoManager {
             AdminCreateUserResponse response = future.join();
 
             if (response.sdkHttpResponse().isSuccessful()) {
-                return new CognitoCreatedResponse(
+                return new CognitoCreatedResponseModel(
                         tempPassword, response.user().attributes().getLast().value());
             } else {
                 logger.warning("Failed to create user: " + response.sdkHttpResponse().statusText());

@@ -2,7 +2,7 @@ package io.levysworks.Endpoints;
 
 import io.levysworks.Managers.Database.DbModels.DbCoordinator;
 import io.levysworks.Managers.Database.Mappers.CoordinatorMapper;
-import io.levysworks.Models.CognitoCreatedResponse;
+import io.levysworks.Models.CognitoCreatedResponseModel;
 import io.levysworks.Models.CoordinatorRequestModel;
 import io.levysworks.Models.UpdateCoordinatorModel;
 import io.levysworks.Services.CoreService;
@@ -55,7 +55,7 @@ public class CoordinatorsEndpoint {
         }
 
         try {
-            CognitoCreatedResponse response =
+            CognitoCreatedResponseModel response =
                     coreService.registerNewCoordinator(
                             coordinatorRequestModel.email(),
                             coordinatorRequestModel.firstName(),
