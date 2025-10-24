@@ -127,11 +127,14 @@ public class StorageManager {
                             PutObjectRequest.builder()
                                     .bucket(config.s3().bucketName())
                                     .key(bundleKey)
-                                    .contentType("zip")
+                                    .contentType("application/zip")
                                     .build(),
                             missionBundle.toPath());
 
             if (response != null && response.sdkHttpResponse().isSuccessful()) {
+                if (!missionBundle.delete()) {
+                    logger.warning("Cleanup failed, manual tmp cleaning required!");
+                };
                 return bundleKey;
             } else {
                 return null;
