@@ -72,13 +72,14 @@ public class IotManager {
                 iotAsyncClient.attachPolicy(attachPolicyRequest).join();
     }
 
-    public JobExecutionStatus getJobExecutionStatus(String jobId, String thingName) {
+    public JobExecution getJobExecutionStatus(String jobId, String thingName) {
         DescribeJobExecutionRequest describeJobExecutionRequest =
                 DescribeJobExecutionRequest.builder().jobId(jobId).thingName(thingName).build();
 
         CompletableFuture<DescribeJobExecutionResponse> response =
                 iotAsyncClient.describeJobExecution(describeJobExecutionRequest);
-        return response.join().execution().status();
+
+        return response.join().execution();
     }
 
     public String getLastJobId(String thingName) {

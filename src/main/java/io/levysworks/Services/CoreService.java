@@ -22,11 +22,12 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.UUID;
 import org.jboss.logging.Logger;
 import org.postgis.Geometry;
-import software.amazon.awssdk.services.iot.model.JobExecutionStatus;
+import software.amazon.awssdk.services.iot.model.JobExecution;
 
 @Startup
 @ApplicationScoped
@@ -215,9 +216,10 @@ public class CoreService {
         iotManager.updateThingGroupOutpost(group.getName(), outpost.getName());
     }
 
-    public CognitoCreatedResponse registerNewCoordinator(
+    public CognitoCreatedResponseModel registerNewCoordinator(
             String email, String firstName, String lastName) {
-        CognitoCreatedResponse cognitoUser = cognitoManager.createUser(email, firstName, lastName);
+        CognitoCreatedResponseModel cognitoUser =
+                cognitoManager.createUser(email, firstName, lastName);
 
         if (cognitoUser == null) {
             return null;
@@ -260,55 +262,76 @@ public class CoreService {
      * @param group Name of the group of drones
      * @param coordinatorUUID The UUID of the coordinator performing this operation
      * @throws IOException If there was an error generating the mission bundle
+     * @throws NotFoundException If the outpost, or group doesn't exist
      */
-    public void createNewMission(String outpost, String group, String coordinatorUUID)
-            throws IOException {
+    public UUID createNewMission(String outpost, String group, UUID coordinatorUUID)
+            throws IOException, NotFoundException {
         Timestamp startedAt = new Timestamp(System.currentTimeMillis());
-        String missionName = "missions/" + outpost + "/" + group + "/mission-" + startedAt;
+
+        String s3Timestamp =
+                startedAt
+                        .toLocalDateTime()
+                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS"));
+
+        String missionPath = "missions/" + outpost + "/" + group + "/mission-" + s3Timestamp;
 
         Geometry area = dbManager.getOutpostGeometry(outpost);
+        if (area == null) {
+            throw new NotFoundException("Outpost cannot be found with name " + outpost);
+        }
 
         File missionBundle = PolygonCoverageAlgorithm.calculateSinge(area);
-        String key = storageManager.uploadMissionBundle(missionName, missionBundle);
+        String key = storageManager.uploadMissionBundle(missionPath, missionBundle);
+
         String presignedUrl = storageManager.getPresignedObjectUrl(key);
 
         String groupARN = iotManager.getGroupARN(group);
 
+        String iotMissionName = outpost + "-" + group + "_" + s3Timestamp;
+
         // Create 'Download-File' mission -> download mission file from url and execute mission from
         // it
         iotManager.createIoTJob(
-                missionName,
+                iotMissionName,
                 groupARN,
                 config.iot().newMissionJobArn(),
                 Map.ofEntries(
                         Map.entry("downloadUrl", presignedUrl),
                         Map.entry("filePath", "/tmp/missions/")));
 
-        UUID groupUUID = groupMapper.findByName(group).getOutpost_uuid();
+        DbGroup dbgroup = groupMapper.findByName(group);
+        if (dbgroup == null) {
+            throw new NotFoundException("Group not found with name " + group);
+        }
+
+        UUID groupUUID = dbgroup.getUuid();
+
         String bundleUrl = storageManager.getInternalObjectUrl(key);
 
+        UUID missionUuid = UUID.randomUUID();
         missionMapper.insert(
-                UUID.randomUUID(),
-                groupUUID,
-                missionName,
-                bundleUrl,
-                startedAt,
-                UUID.fromString(coordinatorUUID));
+                missionUuid, groupUUID, iotMissionName, bundleUrl, startedAt, coordinatorUUID);
+
+        return missionUuid;
     }
 
-        public JobExecutionStatus getMissionStatus(UUID droneUuid) throws NotFoundException {
-            DbDrone drone =  droneMapper.findByUuid(droneUuid);
-            if (drone == null) {
-                throw new NotFoundException("Drone not found with UUID " + droneUuid.toString());
-            }
-
-            String thingName = drone.getName();
-
-            String lastJopId = iotManager.getLastJobId(thingName);
-            if (lastJopId == null) {
-                return null;
-            }
-
-            return iotManager.getJobExecutionStatus(lastJopId, thingName);
+    public DroneExecutionStatusResponseModel getMissionStatus(UUID droneUuid)
+            throws NotFoundException {
+        DbDrone drone = droneMapper.findByUuid(droneUuid);
+        if (drone == null) {
+            throw new NotFoundException("Drone not found with UUID " + droneUuid.toString());
         }
+
+        String thingName = drone.getName();
+
+        String lastJopId = iotManager.getLastJobId(thingName);
+        if (lastJopId == null) {
+            return null;
+        }
+
+        JobExecution jobStatus = iotManager.getJobExecutionStatus(lastJopId, thingName);
+
+        return new DroneExecutionStatusResponseModel(
+                droneUuid, jobStatus.status(), jobStatus.startedAt());
+    }
 }

@@ -10,7 +10,7 @@ public interface MissionMapper {
     @Insert(
             "INSERT INTO missions (uuid, group_uuid, name, bundle_url, start_time, created_by)"
                     + " VALUES (#{uuid, jdbcType=OTHER}, #{group_uuid, jdbcType=OTHER}, #{name},"
-                    + " #{bundle_url}, #{start_time}, #{created_by})")
+                    + " #{bundle_url}, #{start_time}, #{created_by, jdbcType=OTHER})")
     void insert(
             @Param("uuid") UUID uuid,
             @Param("group_uuid") UUID group_uuid,
